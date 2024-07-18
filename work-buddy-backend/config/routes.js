@@ -13,16 +13,26 @@ const AuthRouter = {
     'GET /auth/user': 'AuthController.getActiveUser',
     'POST /auth/logout': 'AuthController.logout',
     'GET /users': 'AuthController.getAllUsers',
+    'POST /update-subject': 'AuthController.updateStudentSubjects',
+    'GET /get-subjects/:id': 'AuthController.getSubject',
+    'GET /api/user-detail/:id': 'AuthController.getUserDetail',
 }
 const chatRouter = {
     'POST /api/message': 'ChatController.sendMessage',
     'GET /api/messages': 'ChatController.getMessages',
 }
+const sessionRouter = {
+    'POST /api/create-session': 'SessionController.createSession',
+    'GET /api/sessions/:id': 'SessionController.getAllSessions',
+    'GET /api/teacher-sessions/:id': 'SessionController.getTeacherSessions',
+    'GET /api/session/:id': 'SessionController.getSessionDetail',
+}
 
 module.exports.routes = {
 
     ...AuthRouter,
-    ...chatRouter
+    ...chatRouter,
+    ...sessionRouter
 
     /***************************************************************************
     *                                                                          *

@@ -1,22 +1,51 @@
+import { ROLE_STUDENT, ROLE_TEACHER } from "src/constants/constant"
+
 const navigation = () => {
   return [
     {
-      title: 'Home',
-      path: '/home',
-      icon: 'bx:home-circle',
+      title: 'Dashboard',
+      path: '/dashboard',
+      icon: 'bx:bxs-dashboard',
+      action: 'manage',
+      subject: ROLE_TEACHER
+    },
+
+    {
+      title: 'Sessions',
+      path: '/sessions',
+      icon: 'bx:bxl-microsoft-teams',
+      action: 'manage',
+      subject: ROLE_TEACHER
     },
     {
-      title: 'Second Page',
-      path: '/second-page',
-      icon: 'bx:envelope',
+      title: 'Classrooms',
+      path: '/classroom',
+      icon: 'bx:bxl-microsoft-teams',
+      action: 'manage',
+      subject: ROLE_STUDENT
     },
     {
-      path: '/acl',
-      action: 'read',
-      subject: 'acl-page',
-      title: 'Access Control',
-      icon: 'bx:shield',
-    }
+      title: 'My Calendar',
+      path: '/calendar',
+      icon: 'bx:bxs-calendar-event',
+      action: 'manage',
+      subject: ROLE_TEACHER
+    },
+    {
+      title: 'Chats',
+      path: '/chat',
+      icon: 'bx:bxs-message-rounded-dots',
+      action: 'manage',
+      subject: ROLE_TEACHER
+    },
+    {
+      title: 'Chats',
+      path: '/chat',
+      icon: 'bx:bxs-message-rounded-dots',
+      action: 'manage',
+      subject: ROLE_STUDENT
+    },
+
   ]
 }
 

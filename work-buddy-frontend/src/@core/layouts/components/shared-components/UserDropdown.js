@@ -13,12 +13,14 @@ import Divider from '@mui/material/Divider'
 import MenuItem from '@mui/material/MenuItem'
 import { styled } from '@mui/material/styles'
 import Typography from '@mui/material/Typography'
-
+import MuiAvatar from '@mui/material/Avatar'
+import CustomAvatar from 'src/@core/components/mui/avatar'
 // ** Icon Imports
 import Icon from 'src/@core/components/icon'
 
 // ** Context
 import { useAuth } from 'src/hooks/useAuth'
+import { getInitials } from 'src/@core/utils/get-initials'
 
 // ** Styled Components
 const BadgeContentSpan = styled('span')(({ theme }) => ({
@@ -32,6 +34,7 @@ const BadgeContentSpan = styled('span')(({ theme }) => ({
 const UserDropdown = props => {
   // ** Props
   const { settings } = props
+  const { user } = useAuth()
 
   // ** States
   const [anchorEl, setAnchorEl] = useState(null)
@@ -86,12 +89,21 @@ const UserDropdown = props => {
           horizontal: 'right'
         }}
       >
-        <Avatar
-          alt='John Doe'
-          src='/images/avatars/1.png'
-          onClick={handleDropdownOpen}
-          sx={{ width: 40, height: 40 }}
-        />
+        {user?.profilePic ? (
+          <MuiAvatar
+            sx={{ width: '5rem', height: '5rem' }}
+            src={user?.profilePic}
+            alt={user?.userName}
+          />
+        ) : (
+          <CustomAvatar
+            skin='light'
+            sx={{ width: '3rem', height: '3rem', fontWeight: 500, fontSize: '1rem' }}
+          >
+            {getInitials(user?.userName)}
+
+          </CustomAvatar>
+        )}
       </Badge>
       <Menu
         anchorEl={anchorEl}
@@ -111,12 +123,28 @@ const UserDropdown = props => {
                 horizontal: 'right'
               }}
             >
-              <Avatar alt='John Doe' src='/images/avatars/1.png' sx={{ width: '2.5rem', height: '2.5rem' }} />
+              {user?.profilePic ? (
+                <MuiAvatar
+                  sx={{ width: '5rem', height: '5rem' }}
+                  src={user?.profilePic}
+                  alt={user?.userName}
+                />
+              ) : (
+                <CustomAvatar
+                  skin='light'
+                  // color={store.selectedChat.contact.avatarColor}
+                  sx={{ width: '3rem', height: '3rem', fontWeight: 500, fontSize: '1rem' }}
+                >
+                  {getInitials(user?.userName)}
+
+                </CustomAvatar>
+              )}
+              {/* <Avatar alt='John Doe' src='/images/avatars/1.png' sx={{ width: '2.5rem', height: '2.5rem' }} /> */}
             </Badge>
             <Box sx={{ ml: 3, display: 'flex', alignItems: 'flex-start', flexDirection: 'column' }}>
-              <Typography sx={{ fontWeight: 500 }}>John Doe</Typography>
+              <Typography sx={{ fontWeight: 500 }}>{user?.userName}</Typography>
               <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-                Admin
+                {user?.role}
               </Typography>
             </Box>
           </Box>
@@ -128,7 +156,7 @@ const UserDropdown = props => {
             Profile
           </Box>
         </MenuItem>
-        <MenuItem sx={{ p: 0 }} onClick={() => handleDropdownClose()}>
+        {/* <MenuItem sx={{ p: 0 }} onClick={() => handleDropdownClose()}>
           <Box sx={styles}>
             <Icon icon='bx:envelope' />
             Inbox
@@ -158,7 +186,7 @@ const UserDropdown = props => {
             <Icon icon='bx:help-circle' />
             FAQ
           </Box>
-        </MenuItem>
+        </MenuItem> */}
         <Divider />
         <MenuItem
           onClick={handleLogout}

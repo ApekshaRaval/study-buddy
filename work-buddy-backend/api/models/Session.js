@@ -1,5 +1,5 @@
 /**
- * Auth.js
+ * Session.js
  *
  * @description :: A model definition represents a database table/collection.
  * @docs        :: https://sailsjs.com/docs/concepts/models-and-orm/models
@@ -7,51 +7,40 @@
 
 module.exports = {
 
-  tableName: "user",
+  tableName: "session",
   attributes: {
-    id: {
+    sessionId: {
       type: 'string',
       required: true,
-      unique: true,
-      columnName: 'id',
     },
-    userName: {
+    sessionTitle: {
       type: 'string',
       required: true,
       columnType: 'varchar(5000)',
-      columnName: 'userName',
     },
-    email: {
+    sessionDate: {
       type: 'string',
       required: true,
-      unique: true,
-      columnType: 'varchar(1000)',
-      columnName: 'email',
     },
-    password: {
+    sessionContent: {
+      type: 'string',
+      columnType: 'varchar(5000)',
+    },
+    sessionLink: {
+      type: 'string',
+      columnType: 'varchar(5000)',
+    },
+    teacherId: {
       type: 'string',
       required: true,
-      columnName: 'password',
-    },
-    isLoggedIn: {
-      type: 'boolean',
-      required: true,
-      columnName: 'isLoggedIn',
-    },
-    accessToken: {
-      type: 'string',
-      allowNull: true,
-      columnType: 'text',
-      columnName: 'accessToken',
-    },
-    role: {
-      type: 'string',
-      required: true,
-      columnName: 'role',
     },
     subject: {
-      type: 'ref',
-      columnType: 'character varying[]',
+      type: 'string',
+      required: true,
+    },
+    sessionType: {
+      type: 'string',
+      required: true,
     },
 
     //  ╔═╗╦═╗╦╔╦╗╦╔╦╗╦╦  ╦╔═╗╔═╗
@@ -71,3 +60,4 @@ module.exports = {
   },
 
 };
+

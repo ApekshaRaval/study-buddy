@@ -10,6 +10,8 @@ import axios from 'axios'
 // ** Config
 import authConfig from 'src/configs/auth'
 
+import { toast } from 'react-hot-toast'
+
 // ** Defaults
 const defaultProvider = {
   user: null,
@@ -24,7 +26,7 @@ const AuthContext = createContext(defaultProvider)
 const AuthProvider = ({ children }) => {
   // ** States
   const [user, setUser] = useState(defaultProvider.user)
-  const [loading, setLoading] = useState(defaultProvider.loading)
+  const [loading, setLoading] = useState(false)
 
   // ** Hooks
   const router = useRouter()
@@ -32,58 +34,111 @@ const AuthProvider = ({ children }) => {
     const initAuth = async () => {
       const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
       if (storedToken) {
-        setLoading(true)
-        await axios
-          .get(authConfig.meEndpoint, {
+        try {
+          setLoading(true)
+          const response = await fetch("http://localhost:1337/auth/user", {
+            method: 'GET',
             headers: {
-              Authorization: storedToken
+              'Authorization': 'Bearer ' + storedToken
             }
           })
-          .then(async response => {
+          const data = await response.json()
+          if (data?.status === 200 || data?.errorCode === "SUC000") {
             setLoading(false)
-            setUser({ ...response.data.userData })
-          })
-          .catch(() => {
-            localStorage.removeItem('userData')
-            localStorage.removeItem('refreshToken')
-            localStorage.removeItem('accessToken')
-            setUser(null)
-            setLoading(false)
-            if (authConfig.onTokenExpiration === 'logout' && !router.pathname.includes('login')) {
-              router.replace('/login')
-            }
-          })
-      } else {
-        setLoading(false)
+            setUser({ ...data?.data })
+          }
+        } catch (error) {
+          console.log('error: ', error);
+          localStorage.removeItem('userData')
+          localStorage.removeItem('accessToken')
+          setUser(null)
+          setLoading(false)
+          router.replace('/login')
+        }
+
+
       }
     }
     initAuth()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleLogin = (params, errorCallback) => {
-    axios
-      .post(authConfig.loginEndpoint, params)
-      .then(async response => {
-        params.rememberMe
-          ? window.localStorage.setItem(authConfig.storageTokenKeyName, response.data.accessToken)
-          : null
+  const handleLogin = async (params, errorCallback) => {
+    try {
+      const response = await fetch("http://localhost:1337/auth/login", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(params)
+      })
+      const data = await response.json()
+      if (data?.status === 200 || data?.errorCode === "SUC000") {
+        const role = data?.data?.rows[0]?.role
+        console.log('data: ', data);
+        toast.success(data.message)
+        window.localStorage.setItem('userData', JSON.stringify(data?.data?.rows[0]))
+        window.localStorage.setItem(authConfig.storageTokenKeyName, data.token)
         const returnUrl = router.query.returnUrl
-        setUser({ ...response.data.userData })
-        params.rememberMe ? window.localStorage.setItem('userData', JSON.stringify(response.data.userData)) : null
-        const redirectURL = returnUrl && returnUrl !== '/' ? returnUrl : '/'
-        router.replace(redirectURL)
-      })
-      .catch(err => {
-        if (errorCallback) errorCallback(err)
-      })
+        router.push(role === 'student' ? '/subjects' : '/dashboard')
+        setUser({ ...data?.data?.rows[0] })
+        // const redirectURL = returnUrl && returnUrl !== '/' ? returnUrl : '/'
+        // router.replace(redirectURL)
+      } else {
+        toast.error(data.message)
+      }
+
+    } catch (error) {
+      console.log('error: ', error);
+    }
   }
 
-  const handleLogout = () => {
-    setUser(null)
-    window.localStorage.removeItem('userData')
-    window.localStorage.removeItem(authConfig.storageTokenKeyName)
-    router.push('/login')
+  const handleRegister = async (params) => {
+    try {
+      const response = await fetch("http://localhost:1337/auth/register", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(params)
+      })
+      const data = await response.json()
+
+      if (data?.status === 200) {
+        toast.success(data.message)
+        router.push('/login')
+      }
+
+    } catch (err) {
+      console.error(err)
+      toast.error(err)
+
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
+      if (storedToken) {
+        const fetchLogoutApi = await fetch("http://localhost:1337/auth/logout", {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + storedToken
+          }
+        })
+        const response = await fetchLogoutApi.json()
+        if (response.status === 200) {
+          toast.success(response.message)
+          window.localStorage.removeItem('userData')
+          window.localStorage.removeItem(authConfig.storageTokenKeyName)
+          setUser(null)
+          setLoading(false)
+          router.push('/login')
+        }
+      }
+    } catch (err) {
+      console.log(err)
+    }
   }
 
   const values = {
@@ -91,6 +146,7 @@ const AuthProvider = ({ children }) => {
     loading,
     setUser,
     setLoading,
+    register: handleRegister,
     login: handleLogin,
     logout: handleLogout
   }

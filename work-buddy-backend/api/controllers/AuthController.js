@@ -14,9 +14,9 @@ require('dotenv').config()
 module.exports = {
     register: async (req, res) => {
         try {
-            const { userName, email, password } = req.body;
+            const { userName, email, password, role } = req.body;
 
-            if (!userName || !email || !password) {
+            if (!userName || !email || !password || !role) {
                 return res.status(HTTP_STATUS_CODE.NOT_FOUND).json({
                     status: HTTP_STATUS_CODE.NOT_FOUND,
                     errorCode: "ERR404",
@@ -31,6 +31,7 @@ module.exports = {
                 email VARCHAR(255) NOT NULL,
                 password VARCHAR(255) NOT NULL,
                 "isLoggedIn" BOOLEAN NOT NULL,
+                role VARCHAR(255) NOT NULL,
                 token VARCHAR(255)
 
             )`;
@@ -51,8 +52,8 @@ module.exports = {
 
             const id = uuidv4();
             const hashedPassword = await bcrypt.hash(password, 10);
-            const addUserData = `INSERT INTO "user" (id, "userName", email, password, "isLoggedIn", token) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
-            const data = await sails.sendNativeQuery(addUserData, [id, userName, email, hashedPassword, false, null]);
+            const addUserData = `INSERT INTO "user" (id, "userName", email, password, "isLoggedIn", role, token) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
+            const data = await sails.sendNativeQuery(addUserData, [id, userName, email, hashedPassword, false, role, null]);
 
             return res.status(HTTP_STATUS_CODE.OK).json({
                 status: HTTP_STATUS_CODE.OK,
@@ -73,6 +74,7 @@ module.exports = {
             });
         }
     },
+
     login: async (req, res) => {
         try {
             const { email, password } = req.body;
@@ -137,6 +139,7 @@ module.exports = {
         }
 
     },
+
     getActiveUser: async (req, res) => {
         const token = req?.headers?.authorization?.split(' ')[1];
         try {
@@ -174,6 +177,7 @@ module.exports = {
         }
 
     },
+
     logout: async (req, res) => {
         const token = req?.headers?.authorization?.split(' ')[1];
         try {
@@ -188,9 +192,7 @@ module.exports = {
                 });
             }
             const updateLoginStatus = `UPDATE public."user" SET "isLoggedIn" = false , token = null WHERE "token" = $1 AND "isLoggedIn" = true RETURNING *`;
-            console.log('updateLoginStatus: ', updateLoginStatus);
             const data = await sails.sendNativeQuery(updateLoginStatus, [token]);
-            console.log('data: ', data);
             return res.status(HTTP_STATUS_CODE.OK).json({
                 status: HTTP_STATUS_CODE.OK,
                 errorCode: "SUC000",
@@ -211,6 +213,7 @@ module.exports = {
 
 
     },
+
     getAllUsers: async (req, res) => {
         const token = req?.headers?.authorization?.split(' ')[1];
         const users = `SELECT * FROM public."user"`;
@@ -244,5 +247,135 @@ module.exports = {
                 error: err,
             });
         }
+    },
+
+    updateStudentSubjects: async (req, res) => {
+        const token = req?.headers?.authorization?.split(' ')[1];
+        const { subjects, studentId } = req.body;
+
+        console.log('studentId: ', studentId);
+        try {
+            const isValidUser = jwt.verify(token, process.env.JWT_SECRET);
+            if (!isValidUser) {
+                return res.status(HTTP_STATUS_CODE.UNAUTHORIZED).json({
+                    status: HTTP_STATUS_CODE.UNAUTHORIZED,
+                    errorCode: "ERR401",
+                    message: "User not found!",
+                    data: null,
+                    error: "",
+                });
+            }
+
+            // Check if the column 'subjects' exists
+            const checkColumn = `SELECT column_name
+                                 FROM information_schema.columns
+                                 WHERE table_name='user' AND column_name='subjects'`;
+            const columnResult = await sails.sendNativeQuery(checkColumn);
+
+            // If the 'subjects' column does not exist, add it
+            if (columnResult.rows.length === 0) {
+                const addColumn = `ALTER TABLE public."user" ADD COLUMN "subjects" TEXT`;
+                await sails.sendNativeQuery(addColumn);
+            }
+
+            const updateStudent = `UPDATE public."user" SET "subjects" = $1 WHERE "id" = $2 AND "isLoggedIn" = true RETURNING *`;
+            const data = await sails.sendNativeQuery(updateStudent, [subjects, studentId]);
+
+            return res.status(HTTP_STATUS_CODE.OK).json({
+                status: HTTP_STATUS_CODE.OK,
+                errorCode: "SUC000",
+                message: "Subjects Updated Successfully",
+                data: data.rows[0],
+                error: "",
+            });
+
+        } catch (err) {
+            console.error(err);
+            return res.status(HTTP_STATUS_CODE.SERVER_ERROR).json({
+                status: HTTP_STATUS_CODE.SERVER_ERROR,
+                errorCode: "ERR500",
+                message: "Internal Server Error!",
+                data: null,
+                error: err,
+            });
+        }
+    },
+
+    getSubject: async (req, res) => {
+        try {
+            const { id } = req.params;
+            if (!id) {
+                return res.status(HTTP_STATUS_CODE.NOT_FOUND).json({
+                    status: HTTP_STATUS_CODE.NOT_FOUND,
+                    errorCode: "ERR404",
+                    message: "Subjects not found!",
+                    data: null,
+                    error: "",
+                });
+            }
+            const subjects = `SELECT subjects FROM public."user" WHERE "id" = $1 AND "isLoggedIn" = true`;
+            const data = await sails.sendNativeQuery(subjects, [id]);
+            return res.status(HTTP_STATUS_CODE.OK).json({
+                status: HTTP_STATUS_CODE.OK,
+                errorCode: "SUC000",
+                message: "Subjects Found",
+                data: data.rows[0],
+                error: "",
+            })
+        } catch (err) {
+            console.error(err);
+            return res.status(HTTP_STATUS_CODE.SERVER_ERROR).json({
+                status: HTTP_STATUS_CODE.SERVER_ERROR,
+                errorCode: "ERR500",
+                message: "Internal Server Error!",
+                data: null,
+                error: err,
+            });
+        }
+    },
+
+    getUserDetail: async (req, res) => {
+        const token = req?.headers?.authorization?.split(' ')[1];
+        try {
+            const isValidUser = jwt.verify(token, process.env.JWT_SECRET);
+            if (!isValidUser) {
+                return res.status(HTTP_STATUS_CODE.UNAUTHORIZED).json({
+                    status: HTTP_STATUS_CODE.UNAUTHORIZED,
+                    errorCode: "ERR401",
+                    message: "User not found!",
+                    data: null,
+                    error: "",
+                });
+            }
+            const { id } = req.params;
+            if (!id) {
+                return res.status(HTTP_STATUS_CODE.NOT_FOUND).json({
+                    status: HTTP_STATUS_CODE.NOT_FOUND,
+                    errorCode: "ERR404",
+                    message: "User not found!",
+                    data: null,
+                    error: "",
+                });
+            }
+            const user = `SELECT * FROM public."user" WHERE "id" = $1 AND "isLoggedIn" = true`;
+            const data = await sails.sendNativeQuery(user, [id]);
+            return res.status(HTTP_STATUS_CODE.OK).json({
+                status: HTTP_STATUS_CODE.OK,
+                errorCode: "SUC000",
+                message: "User Found",
+                data: data.rows[0],
+                error: "",
+            })
+        } catch (err) {
+            console.error(err);
+            return res.status(HTTP_STATUS_CODE.SERVER_ERROR).json({
+                status: HTTP_STATUS_CODE.SERVER_ERROR,
+                errorCode: "ERR500",
+                message: "Internal Server Error!",
+                data: null,
+                error: err,
+            });
+        }
     }
+
 }

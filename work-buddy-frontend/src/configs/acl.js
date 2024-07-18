@@ -1,21 +1,21 @@
 import { AbilityBuilder, Ability } from '@casl/ability'
+import { ROLE_ADMIN, ROLE_STUDENT, ROLE_TEACHER } from '../constants/constant'
 
 export const AppAbility = Ability
 
-/**
- * Please define your own Ability rules according to your app requirements.
- * We have just shown Admin and Client rules for demo purpose where
- * admin can manage everything and client can just visit ACL page
- */
 const defineRulesFor = (role, subject) => {
   const { can, rules } = new AbilityBuilder(AppAbility)
-  if (role === 'admin') {
-    can('manage', 'all')
-  } else if (role === 'client') {
-    can(['read'], 'acl-page')
-  } else {
-    can(['read', 'create', 'update', 'delete'], subject)
+
+  const rolePermissions = {
+    [ROLE_ADMIN]: { action: 'manage', subject: 'all' },
+    [ROLE_TEACHER]: { action: 'manage', subject: ROLE_TEACHER },
+    [ROLE_STUDENT]: { action: 'manage', subject: ROLE_STUDENT },
   }
+
+  const defaultPermissions = ['read', 'create', 'update', 'delete']
+  const userPermissions = rolePermissions[role] || { action: defaultPermissions, subject }
+
+  can(userPermissions.action, userPermissions.subject)
 
   return rules
 }
