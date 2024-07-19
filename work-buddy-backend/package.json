@@ -9,11 +9,13 @@
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.5",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
     "nodemon": "^3.1.4",
     "sails": "^1.5.11",
     "sails-hook-orm": "^4.0.3",
     "sails-hook-sockets": "^3.0.0",
     "sails-postgresql": "^5.0.1",
+    "skipper-disk": "^0.5.12",
     "socket.io": "^4.7.5",
     "uuid": "^10.0.0"
   },

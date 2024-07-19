@@ -80,7 +80,7 @@ const AuthProvider = ({ children }) => {
         window.localStorage.setItem('userData', JSON.stringify(data?.data?.rows[0]))
         window.localStorage.setItem(authConfig.storageTokenKeyName, data.token)
         const returnUrl = router.query.returnUrl
-        router.push(role === 'student' ? '/subjects' : '/dashboard')
+        router.push(role === 'student' || role === 'teacher' ? '/subjects' : '/dashboard')
         setUser({ ...data?.data?.rows[0] })
         // const redirectURL = returnUrl && returnUrl !== '/' ? returnUrl : '/'
         // router.replace(redirectURL)

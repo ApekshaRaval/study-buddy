@@ -2,7 +2,7 @@ import Card from '@mui/material/Card'
 import Grid from '@mui/material/Grid'
 import CardHeader from '@mui/material/CardHeader'
 import CardContent from '@mui/material/CardContent'
-import { ROLE_STUDENT, subjects } from 'src/constants/constant'
+import { ROLE_STUDENT, ROLE_TEACHER, standard, subjects } from 'src/constants/constant'
 import { useAuth } from 'src/hooks/useAuth'
 import * as React from 'react';
 import Box from '@mui/material/Box';
@@ -30,7 +30,7 @@ const MenuProps = {
 const Subjects = () => {
     const { user } = useAuth()
     const [subjectsData, setSubjectsData] = React.useState([]);
-    console.log('subjectsData: ', subjectsData);
+    const [standardData, setStandardData] = React.useState([]);
     const router = useRouter()
     const role = user?.role
 
@@ -39,6 +39,14 @@ const Subjects = () => {
             target: { value },
         } = event;
         setSubjectsData(
+            typeof value === 'string' ? value.split(',') : value,
+        );
+    };
+    const handleStandardChange = (event) => {
+        const {
+            target: { value },
+        } = event;
+        setStandardData(
             typeof value === 'string' ? value.split(',') : value,
         );
     };
@@ -52,13 +60,11 @@ const Subjects = () => {
             },
         })
         const data = await fetchResponse.json()
+        console.log('data: ', data);
         if (data?.status === 200 && data?.data?.subjects) {
             const subjectsData = data?.data?.subjects
-            console.log('subjectsData: ', subjectsData);
-            const isSubjectDataIsNotEmpty = (subjectsData) === '{}'
-            console.log('isSubjectDataIsNotEmpty: ', isSubjectDataIsNotEmpty);
-            let arr = !isSubjectDataIsNotEmpty ? subjectsData.replace(/[{}"]/g, '').split(',') : [];
-            setSubjectsData(arr);
+            setSubjectsData(subjectsData);
+            setStandardData(data?.data?.standard)
         }
     }
 
@@ -69,8 +75,10 @@ const Subjects = () => {
     const handleSubmit = async () => {
         const payload = {
             subjects: subjectsData,
-            studentId: user?.id
-        }
+            standard: standardData,
+            id: user?.id
+        };
+
         const fetchResponse = await fetch(`http://localhost:1337/update-subject`, {
             method: 'POST',
             headers: {
@@ -78,14 +86,15 @@ const Subjects = () => {
                 'Authorization': `Bearer ${user?.token}`
             },
             body: JSON.stringify(payload)
-        })
+        });
 
-        const data = await fetchResponse.json()
+        const data = await fetchResponse.json();
         if (data?.status === 200) {
-            toast.success(data?.message)
-            router.push('/dashboard')
+            toast.success(data?.message);
+            router.push('/dashboard');
         }
-    }
+    };
+
 
     const handleSkip = () => {
         router.push('/dashboard')
@@ -94,7 +103,8 @@ const Subjects = () => {
     const handleReset = async () => {
         const payload = {
             subjects: [],
-            studentId: user?.id
+            standard: [],
+            id: user?.id
         }
         const fetchResponse = await fetch(`http://localhost:1337/update-subject`, {
             method: 'POST',
@@ -122,7 +132,32 @@ const Subjects = () => {
                         <Button variant="outlined" sx={{ mx: 4, textTransform: 'none' }} onClick={handleSkip}>Skip</Button>
                     </Box>
                     <CardContent>
-                        <InputLabel id="demo-multiple-chip-label" sx={{ fontSize: '0.90rem', mb: 1.5, color: '#0e74d0', fontWeight: 600 }}>Select your favourite subject</InputLabel>
+                        <InputLabel id="demo-multiple-chip-label" sx={{ fontSize: '0.90rem', mb: 1.5, color: '#0e74d0', fontWeight: 600 }}>Select Your Standard</InputLabel>
+                        <FormControl sx={{ width: '50%' }} >
+                            <Select
+                                labelId="demo-multiple-chip-label"
+                                id="demo-multiple-chip"
+                                multiple={role === ROLE_STUDENT ? false : true}
+                                value={standardData}
+                                onChange={handleStandardChange}
+                                input={<OutlinedInput id="select-multiple-chip" />}
+                                renderValue={(selected) => (
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                        {selected.map((value) => (
+                                            <Chip key={value} label={value} />
+                                        ))}
+                                    </Box>
+                                )}
+                                MenuProps={MenuProps}
+                            >
+                                {standard.map(standard => (
+                                    <MenuItem key={standard.key} value={standard.value}>
+                                        {standard.key}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <InputLabel id="demo-multiple-chip-label" sx={{ fontSize: '0.90rem', mb: 1.5, mt: 3, color: '#0e74d0', fontWeight: 600 }}>Select Your Favourite Subjects</InputLabel>
                         <FormControl fullWidth>
                             <Select
                                 labelId="demo-multiple-chip-label"
@@ -160,7 +195,7 @@ const Subjects = () => {
 
 Subjects.acl = {
     action: 'manage',
-    subject: [ROLE_STUDENT]
+    subject: [ROLE_STUDENT, ROLE_TEACHER]
 }
 
 export default Subjects

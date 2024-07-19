@@ -9,8 +9,7 @@ const HTTP_STATUS_CODE = {
     UNPROCESSABLE_ENTITY: 422,
     SERVER_ERROR: 500,
 };
-
 module.exports.constants = {
-    HTTP_STATUS_CODE
+    HTTP_STATUS_CODE,
 }
 

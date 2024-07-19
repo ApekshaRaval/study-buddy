@@ -86,6 +86,23 @@ const SessionsPage = () => {
       borderRadius: 4
     }
   }))
+  const sendNotification = async () => {
+    const response = await fetch('http://localhost:1337/api/send-notification', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        senderId: user?.id,
+      })
+    })
+    const responseData = await response.json()
+    if (responseData?.status === 200 || responseData?.errorCode === "SUC000") {
+      toast.success(responseData.message)
+    } else {
+      toast.error(responseData.message)
+    }
+  }
 
   const onSubmit = async (data) => {
     const payload = {
@@ -120,6 +137,26 @@ const SessionsPage = () => {
     if (file) {
       const previewUrl = URL.createObjectURL(file)
       setPreviewForVideo(previewUrl)
+      UploadFile(file)
+    }
+  }
+
+  const UploadFile = async (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await fetch('http://localhost:1337/api/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${user?.token}`,
+        'Content-Type': 'multipart/form-data'
+      },
+      body: formData
+    })
+    const responseData = await response.json()
+    if (responseData?.status === 200 || responseData?.errorCode === "SUC000") {
+      toast.success(responseData.message)
+    } else {
+      toast.error(responseData.message)
     }
   }
 
@@ -140,9 +177,13 @@ const SessionsPage = () => {
   useEffect(() => {
     fetchSessions()
   }, [])
+  const options = {
+    body: "Your code submission has received 3 new review comments.",
+    renotify: true,
+  };
 
   return (
-    <Grid container spacing={6}>
+    <Grid container spacing={6} >
       <Grid item md={6} xs={12} >
         <Card sx={{ minHeight: "600px", height: "100%" }}>
           <Box sx={{ maxWidth: { xs: 320, sm: 480 }, bgcolor: 'background.paper', mt: 3, px: 3 }}>

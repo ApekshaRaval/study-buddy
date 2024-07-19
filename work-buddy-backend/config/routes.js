@@ -7,6 +7,8 @@
  * For more information on configuring custom routes, check out:
  * https://sailsjs.com/anatomy/config/routes-js
  */
+
+
 const AuthRouter = {
     'POST /auth/login': 'AuthController.login',
     'POST /auth/register': 'AuthController.register',
@@ -16,6 +18,7 @@ const AuthRouter = {
     'POST /update-subject': 'AuthController.updateStudentSubjects',
     'GET /get-subjects/:id': 'AuthController.getSubject',
     'GET /api/user-detail/:id': 'AuthController.getUserDetail',
+    'POST /api/upload': 'AuthController.uploadFile'
 }
 const chatRouter = {
     'POST /api/message': 'ChatController.sendMessage',
@@ -27,12 +30,21 @@ const sessionRouter = {
     'GET /api/teacher-sessions/:id': 'SessionController.getTeacherSessions',
     'GET /api/session/:id': 'SessionController.getSessionDetail',
 }
-
+const notificationRouter = {
+    'POST /api/send-notification': 'NotificationController.sendNotification',
+    'GET /api/get-notifications/:id': 'NotificationController.getNotifications',
+}
+const subjectRouter = {
+    'POST /api/create-subject': 'SubjectController.createSubject',
+    'GET /api/get-subject/:id': 'SubjectController.getSubjectByUser',
+}
 module.exports.routes = {
 
     ...AuthRouter,
     ...chatRouter,
-    ...sessionRouter
+    ...sessionRouter,
+    ...subjectRouter,
+    ...notificationRouter
 
     /***************************************************************************
     *                                                                          *

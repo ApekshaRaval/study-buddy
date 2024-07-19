@@ -8,6 +8,18 @@ const { v4: uuidv4 } = require('uuid');
 const { HTTP_STATUS_CODE } = sails.config.constants;
 const jwt = require('jsonwebtoken');
 require('dotenv').config()
+const multer = require('multer')
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, './uploads');
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    },
+});
+
+const upload = multer({ storage });
 
 module.exports = {
     createSession: async (req, res) => {
@@ -168,6 +180,32 @@ module.exports = {
             });
         }
     },
+    uploadFile: async function (req, res) {
+        console.log('req: ', req?.file);
+        upload.single('file')(req, res, async function (err) {
+            if (err) {
+                console.log('err: ', err);
+                return res.serverError(err);
+            }
+
+            // Save file information to the database
+            try {
+                console.log('req.file.filename: ', req.file.filename);
+                const file = await File.create({
+                    filename: req.file.filename,
+                    path: req.file.path,
+                    size: req.file.size
+                }).fetch();
+
+                return res.json({
+                    status: 'success',
+                    file
+                });
+            } catch (error) {
+                return res.serverError(error);
+            }
+        });
+    }
 }
 
 

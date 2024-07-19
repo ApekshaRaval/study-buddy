@@ -1,67 +1,27 @@
 /**
- * Auth.js
+ * Subject.js
  *
  * @description :: A model definition represents a database table/collection.
  * @docs        :: https://sailsjs.com/docs/concepts/models-and-orm/models
  */
 
-module.exports = {
 
-  tableName: "user",
+module.exports = {
+  tableName: "subject",
   attributes: {
-    id: {
+    subjectId: {
       type: 'string',
-      required: true,
-      unique: true,
-      columnName: 'id',
+      required: true
     },
-    userName: {
+    subjectName: {
       type: 'string',
-      required: true,
-      columnType: 'varchar(5000)',
-      columnName: 'userName',
+      required: true
     },
-    email: {
+    teacherId: {
       type: 'string',
-      required: true,
-      unique: true,
-      columnType: 'varchar(1000)',
-      columnName: 'email',
     },
-    password: {
+    studentId: {
       type: 'string',
-      required: true,
-      columnName: 'password',
-    },
-    isLoggedIn: {
-      type: 'boolean',
-      required: true,
-      columnName: 'isLoggedIn',
-    },
-    accessToken: {
-      type: 'string',
-      allowNull: true,
-      columnType: 'text',
-      columnName: 'accessToken',
-    },
-    role: {
-      type: 'string',
-      required: true,
-      columnName: 'role',
-    },
-    subjects: {
-      type: 'ref',
-      columnType: 'character varying[]',
-    },
-    standard: {
-      type: 'ref',
-      columnType: 'character varying[]',
-    },
-    avatarUrl: {
-      type: 'string'
-    },
-    avatarFd: {
-      type: 'string'
     }
     //  ╔═╗╦═╗╦╔╦╗╦╔╦╗╦╦  ╦╔═╗╔═╗
     //  ╠═╝╠╦╝║║║║║ ║ ║╚╗╔╝║╣ ╚═╗
@@ -80,3 +40,4 @@ module.exports = {
   },
 
 };
+

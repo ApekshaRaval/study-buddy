@@ -37,14 +37,14 @@ function CalendarPage() {
 
     return (
         <div>
-            <FullCalendar
+            {sessions && sessions.length > 0 ? <FullCalendar
 
                 plugins={[dayGridPlugin]}
                 initialView='dayGridMonth'
                 weekends={false}
                 events={events}
                 eventContent={renderEventContent}
-            />
+            /> : <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}><h2>No Sessions Found</h2></Box>}
         </div>
     )
 }
