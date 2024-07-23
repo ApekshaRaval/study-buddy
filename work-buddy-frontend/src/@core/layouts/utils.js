@@ -68,3 +68,28 @@ export const removeChildren = (children, openGroup, currentActiveGroup) => {
     }
   })
 }
+
+export const getCountDown = (sessionDate) => {
+  let coundown = null
+  const interval = setInterval(() => {
+    if (sessionDate) {
+      const now = new Date().getTime();
+      const sessionTime = new Date(Number(sessionDate)).getTime();
+      const timeDiff = sessionTime - now;
+
+      if (timeDiff <= 0) {
+        clearInterval(interval);
+        return null
+      } else {
+        const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+        coundown = (`${hours}h ${minutes}m ${seconds}s`);
+        return coundown
+      }
+    }
+  }, 1000);
+
+  return interval
+
+}

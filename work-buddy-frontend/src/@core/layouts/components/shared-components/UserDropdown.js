@@ -150,43 +150,13 @@ const UserDropdown = props => {
           </Box>
         </Box>
         <Divider sx={{ mt: '0 !important' }} />
-        <MenuItem sx={{ p: 0 }} onClick={() => handleDropdownClose()}>
+        <MenuItem sx={{ p: 0 }} onClick={() => { router.push('/profile'), handleDropdownClose() }}>
           <Box sx={styles}>
             <Icon icon='bx:user' />
             Profile
           </Box>
         </MenuItem>
-        {/* <MenuItem sx={{ p: 0 }} onClick={() => handleDropdownClose()}>
-          <Box sx={styles}>
-            <Icon icon='bx:envelope' />
-            Inbox
-          </Box>
-        </MenuItem>
-        <MenuItem sx={{ p: 0 }} onClick={() => handleDropdownClose()}>
-          <Box sx={styles}>
-            <Icon icon='bx:message' />
-            Chat
-          </Box>
-        </MenuItem>
-        <Divider sx={{ my: theme => `${theme.spacing(2)} !important` }} />
-        <MenuItem sx={{ p: 0 }} onClick={() => handleDropdownClose()}>
-          <Box sx={styles}>
-            <Icon icon='bx:cog' />
-            Settings
-          </Box>
-        </MenuItem>
-        <MenuItem sx={{ p: 0 }} onClick={() => handleDropdownClose()}>
-          <Box sx={styles}>
-            <Icon icon='bx:dollar' />
-            Pricing
-          </Box>
-        </MenuItem>
-        <MenuItem sx={{ p: 0 }} onClick={() => handleDropdownClose()}>
-          <Box sx={styles}>
-            <Icon icon='bx:help-circle' />
-            FAQ
-          </Box>
-        </MenuItem> */}
+
         <Divider />
         <MenuItem
           onClick={handleLogout}

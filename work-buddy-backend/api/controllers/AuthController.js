@@ -10,7 +10,8 @@ const { HTTP_STATUS_CODE } = sails.config.constants;
 const { generateAuthToken } = sails.config.utils;
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
-
+const path = require('path');
+const SkipperDisk = require('skipper-disk');
 module.exports = {
     register: async (req, res) => {
         try {
@@ -36,8 +37,8 @@ module.exports = {
                 token VARCHAR(255),
                 subjects VARCHAR[],
                 standard VARCHAR[],
-                "avatarUrl" VARCHAR,
-                "avatarFd" VARCHAR
+                "profilePicUrl" VARCHAR,
+                "profilePicFd" VARCHAR
             )`;
 
             await sails.sendNativeQuery(createUserTable);
@@ -247,7 +248,6 @@ module.exports = {
                 });
             }
             const data = await sails.sendNativeQuery(users);
-            console.log("data: ", data);
             return res.status(HTTP_STATUS_CODE.OK).json({
                 status: HTTP_STATUS_CODE.OK,
                 errorCode: "SUC000",
@@ -354,19 +354,8 @@ module.exports = {
     },
 
     getUserDetail: async (req, res) => {
-        const token = req?.headers?.authorization?.split(" ")[1];
-        try {
-            const isValidUser = jwt.verify(token, process.env.JWT_SECRET);
-            if (!isValidUser) {
-                return res.status(HTTP_STATUS_CODE.UNAUTHORIZED).json({
-                    status: HTTP_STATUS_CODE.UNAUTHORIZED,
-                    errorCode: "ERR401",
-                    message: "User not found!",
-                    data: null,
-                    error: "",
-                });
-            }
 
+        try {
             const { id } = req.params;
             if (!id) {
                 return res.status(HTTP_STATUS_CODE.NOT_FOUND).json({
@@ -378,7 +367,7 @@ module.exports = {
                 });
             }
 
-            const query = `SELECT * FROM public."user" WHERE "id" = $1 AND "isLoggedIn" = true`;
+            const query = `SELECT * FROM public."user" WHERE "id" = $1 `;
             const data = await sails.sendNativeQuery(query, [id]);
             const user = data.rows[0];
 
@@ -416,28 +405,85 @@ module.exports = {
             });
         }
     },
-    uploadAvatar: function (req, res) {
-        upload.single("avatar")(req, res, async function (err) {
+
+
+    uploadImage: async (req, res) => {
+        const { id } = req.params;
+
+        req.file('profilePicture').upload({
+            // Don't allow the total upload size to exceed ~10MB
+            maxBytes: 10000000,
+            // Set the directory where files will be uploaded
+            dirname: require('path').resolve(sails.config.appPath, './uploads')
+        }, async function whenDone(err, uploadedFiles) {
+
             if (err) {
                 return res.serverError(err);
             }
 
-            if (!req.file) {
-                return res.badRequest("No file was uploaded");
+            // If no files were uploaded, respond with an appropriate message
+            if (uploadedFiles.length === 0) {
+                return res.badRequest('No file was uploaded');
             }
+            var baseUrl = sails.config.custom.baseUrl;
 
-            const baseUrl = sails.config.custom.baseUrl;
+            // Save the "fd" and the url where the avatar for a user can be accessed
+            const updateProfilePic = `UPDATE public."user" SET "profilePicUrl" = $1, "profilePicFd" = $2 WHERE "id" = $3`;
 
             try {
-                await User.updateOne({ id: req.session.userId }).set({
-                    avatarUrl: `${baseUrl}/user/avatar/${req.session.userId}`,
-                    avatarFd: req.file.path,
-                });
+                const data = await sails.sendNativeQuery(updateProfilePic, [`${baseUrl}/user/avatar/${id}`, uploadedFiles[0].fd, id]);
+                console.log('data: ', data);
 
-                return res.ok();
-            } catch (error) {
-                return res.serverError(error);
+                // Return the information about the uploaded file(s)
+                return res.json({
+                    message: 'File uploaded successfully!',
+                    files: uploadedFiles
+                });
+            } catch (dbErr) {
+                return res.serverError(dbErr);
             }
         });
     },
-};
+    getProfile: async (req, res) => {
+        try {
+            const userId = req.param('id');
+            console.log('Requested user ID:', userId);
+
+            const user = await Auth.findOne({ id: userId });
+            console.log('Found user:', user);
+
+            if (!user) {
+                console.log('User not found');
+                return res.notFound({ error: 'User not found' });
+            }
+
+            // User has no avatar image uploaded
+            if (!user.profilePicFd) {
+                console.log('No profile picture found for this user');
+                return res.notFound({ error: 'No profile picture found for this user' });
+            }
+
+            const fileAdapter = SkipperDisk();
+
+            // Ensure the file path is correct
+            const filePath = path.resolve(__dirname, '..', '..', 'uploads', user.profilePicFd.split('/').pop());
+            console.log('Resolved file path:', filePath);
+
+            // Set the filename to the same file as the user uploaded
+            res.set("Content-disposition", `attachment; filename=${user.profilePicUrl.split('/').pop()}`);
+
+            // Stream the file down
+            fileAdapter.read(filePath)
+                .on('error', function (err) {
+                    console.error('File read error:', err); // Log error
+                    return res.serverError(err);
+                })
+                .pipe(res);
+
+        } catch (err) {
+            console.error('Server error:', err); // Log error
+            return res.serverError(err);
+        }
+    }
+
+}

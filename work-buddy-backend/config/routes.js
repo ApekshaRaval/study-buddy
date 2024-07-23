@@ -18,7 +18,8 @@ const AuthRouter = {
     'POST /update-subject': 'AuthController.updateStudentSubjects',
     'GET /get-subjects/:id': 'AuthController.getSubject',
     'GET /api/user-detail/:id': 'AuthController.getUserDetail',
-    'POST /api/upload': 'AuthController.uploadFile'
+    'POST /upload/image/:id': 'AuthController.uploadImage',
+    'GET /get-profile/:id': 'AuthController.getProfile',
 }
 const chatRouter = {
     'POST /api/message': 'ChatController.sendMessage',
@@ -29,6 +30,7 @@ const sessionRouter = {
     'GET /api/sessions/:id': 'SessionController.getAllSessions',
     'GET /api/teacher-sessions/:id': 'SessionController.getTeacherSessions',
     'GET /api/session/:id': 'SessionController.getSessionDetail',
+    'Delete /api/delete-session/:id': 'SessionController.deleteSession',
 }
 const notificationRouter = {
     'POST /api/send-notification': 'NotificationController.sendNotification',

@@ -9,55 +9,59 @@ import Grid from '@mui/material/Grid'
 import Card from '@mui/material/Card'
 import Typography from '@mui/material/Typography'
 import CardContent from '@mui/material/CardContent'
-import { ROLE_TEACHER, subjects } from 'src/constants/constant';
+import { ROLE_TEACHER } from 'src/constants/constant'
 
 // ** Third Party Imports
 import * as yup from 'yup'
-import { useForm, Controller } from 'react-hook-form'
+import { useFieldArray, useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
-import {
-  Button,
-  FormControl,
-  FormHelperText,
-  InputLabel,
-  Link,
-  MenuItem,
-  Select,
-  Tab,
-  TextField,
-} from '@mui/material';
-import VideoFileIcon from '@mui/icons-material/VideoFile';
-import { Box } from '@mui/system'
-import { Delete } from '@mui/icons-material'
+import { Button, Chip, Link, Tooltip } from '@mui/material'
 import { useAuth } from 'src/hooks/useAuth'
-import DatePicker from "react-multi-date-picker";
-import TimePicker from "react-multi-date-picker/plugins/time_picker";
-import InputIcon from "react-multi-date-picker/components/input_icon"
-import DatePickerHeader from "react-multi-date-picker/plugins/date_picker_header"
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/router'
-import styled from '@emotion/styled'
-import { TabContext, TabList } from '@mui/lab'
-
+import CreateSessionModal from './CreateSessionModal'
+import CreateQuizModal from './CreateQuizModal'
+import { Box } from '@mui/system'
+import QuizIcon from '@mui/icons-material/Quiz';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ModeEditIcon from '@mui/icons-material/ModeEdit';
+import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye';
 const SessionsPage = () => {
   const [previewForVideo, setPreviewForVideo] = useState(null)
-  const [tab, setTab] = useState('create');
+  const [tab, setTab] = useState('create')
   const { user } = useAuth()
   const [sessionDate, setSessionDate] = useState()
   const [sessions, setSessions] = useState()
   const router = useRouter()
+  const [editSession, setEditSession] = useState(false)
 
   const handleChange = (event, newValue) => {
-    setTab(newValue);
-    setPreviewForVideo(null),
-      reset()
-  };
+    setTab(newValue)
+    setPreviewForVideo(null), reset()
+  }
   // ** Hooks
   const ability = useContext(AbilityContext)
   const schema = yup.object().shape({
-    sessionTitle: yup.string().required(),
+    sessionTitle: yup.string().required()
   })
-  console.log(new Date(1721316600984));
+  const [open, setOpen] = useState(false)
+  const [OpenQuiz, setOpenQuiz] = useState(false)
+
+  const handleClickOpen = () => {
+    setOpen(true)
+  }
+  const handleOpenQuiz = () => {
+    setOpenQuiz(true)
+  }
+
+
+  const handleCloseQuiz = () => {
+    setOpenQuiz(false)
+  }
+  const handleClose = () => {
+    setOpen(false)
+  }
 
   const {
     control,
@@ -65,27 +69,22 @@ const SessionsPage = () => {
     handleSubmit,
     reset,
     watch,
+    register,
     formState: { errors }
   } = useForm({
     mode: 'onSubmit',
     resolver: yupResolver(schema)
   })
+  const [countdowns, setCountdowns] = useState({});
+  const now = new Date();
+  const fiveHoursLater = new Date(now.getTime() + 3 * 60 * 60 * 1000);
 
-  const TabListStyled = styled(TabList)(({ theme }) => ({
-    marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(3),
-    marginLeft: '12px',
-    marginLeft: '12px',
-    '& .MuiTabs-indicator': {
-      display: 'none'
-    },
-    '& .Mui-selected': {
-      textTransform: 'capitalize',
-      color: 'white !important',
-      backgroundColor: theme.palette.primary.main,
-      borderRadius: 4
-    }
-  }))
+
+  const { fields, append, prepend, remove, swap, move, insert } = useFieldArray({
+    control,
+    name: "quizcontent",
+  });
+
   const sendNotification = async () => {
     const response = await fetch('http://localhost:1337/api/send-notification', {
       method: 'POST',
@@ -93,18 +92,18 @@ const SessionsPage = () => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        senderId: user?.id,
+        senderId: user?.id
       })
     })
     const responseData = await response.json()
-    if (responseData?.status === 200 || responseData?.errorCode === "SUC000") {
+    if (responseData?.status === 200 || responseData?.errorCode === 'SUC000') {
       toast.success(responseData.message)
     } else {
       toast.error(responseData.message)
     }
   }
 
-  const onSubmit = async (data) => {
+  const onSubmit = async data => {
     const payload = {
       sessionTitle: data?.sessionTitle,
       sessionDate: Number(sessionDate?.valueOf()),
@@ -112,7 +111,8 @@ const SessionsPage = () => {
       sessionLink: data?.sessionLink,
       teacherId: user?.id,
       subject: data?.subject,
-      sessionType: tab
+      sessionType: tab,
+      quizcontent: data?.quizcontent
     }
 
     const response = await fetch('http://localhost:1337/api/create-session', {
@@ -124,7 +124,7 @@ const SessionsPage = () => {
     })
 
     const responseData = await response.json()
-    if (responseData?.status === 200 || responseData?.errorCode === "SUC000") {
+    if (responseData?.status === 200 || responseData?.errorCode === 'SUC000') {
       toast.success(responseData.message)
       router.push('/dashboard')
     } else {
@@ -141,204 +141,191 @@ const SessionsPage = () => {
     }
   }
 
-  const UploadFile = async (file) => {
+  const UploadFile = async file => {
     const formData = new FormData()
     formData.append('file', file)
     const response = await fetch('http://localhost:1337/api/upload', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${user?.token}`,
+        Authorization: `Bearer ${user?.token}`,
         'Content-Type': 'multipart/form-data'
       },
       body: formData
     })
     const responseData = await response.json()
-    if (responseData?.status === 200 || responseData?.errorCode === "SUC000") {
+    if (responseData?.status === 200 || responseData?.errorCode === 'SUC000') {
       toast.success(responseData.message)
     } else {
       toast.error(responseData.message)
     }
   }
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newCountdowns = {};
+      sessions.forEach(session => {
+        const sessionTime = new Date(Number(session.sessionDate)).getTime();
+        const now = new Date().getTime();
+        const timeDiff = sessionTime - now;
+
+        if (timeDiff > 0) {
+          const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+          newCountdowns[session.sessionId] = `${hours}h ${minutes}m ${seconds}s`;
+        } else {
+          newCountdowns[session.sessionId] = 'Started';
+        }
+      });
+      setCountdowns(newCountdowns);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [sessions]);
   const fetchSessions = async () => {
     const response = await fetch(`http://localhost:1337/api/teacher-sessions/${user?.id}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${user?.token}`
-      },
+        Authorization: `Bearer ${user?.token}`
+      }
     })
     const data = await response.json()
     if (data?.status === 200) {
       setSessions(data?.data?.rows)
-    };
+    }
   }
 
   useEffect(() => {
     fetchSessions()
   }, [])
-  const options = {
-    body: "Your code submission has received 3 new review comments.",
-    renotify: true,
-  };
+  const deleteSession = async (sessionId) => {
+    const response = await fetch(`http://localhost:1337/api/delete-session/${sessionId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${user?.token}`
+      }
+    })
+    const data = await response.json()
+    if (data?.status === 200) {
+      toast.success(data?.message)
+      fetchSessions()
+    }
+  }
 
   return (
-    <Grid container spacing={6} >
-      <Grid item md={6} xs={12} >
-        <Card sx={{ minHeight: "600px", height: "100%" }}>
-          <Box sx={{ maxWidth: { xs: 320, sm: 480 }, bgcolor: 'background.paper', mt: 3, px: 3 }}>
-            <TabContext value={tab}>
-              <TabListStyled
-                onChange={handleChange}
-                aria-label="scrollable force tabs example"
+    <Box sx={{ position: 'relative' }} >
+      <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end', '& .css-o01fge-MuiButtonBase-root-MuiButton-root': { p: 0, minWidth: '30px', height: '30px' } }}>
+        <Tooltip title='Create Session'>
+          <Button onClick={handleClickOpen}><AddIcon /></Button>
+        </Tooltip>
+        <Tooltip title='Create Quiz'>
+          <Button onClick={handleOpenQuiz}><QuizIcon /></Button>
+        </Tooltip>
+      </Box>
+      <Grid container spacing={6} mt={5}>
+        {sessions &&
+          sessions?.length > 0 &&
+          sessions.map(session => (
+            <Grid item xs={12} md={6} lg={4} key={session?.sessionId}>
+              <Card
+                key={session?.sessionId}
+                style={{
+                  position: 'relative',
+                  minWidth: { xs: '100%', lg: '300px', md: '400px' },
+                  width: '100%',
+                  height: '230px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginBottom: '20px',
+                  cursor: 'pointer',
+                  backgroundImage:
+                    'url(https://img.freepik.com/premium-photo/white-flowers-background_853558-41364.jpg)',
+                  backgroundSize: 'cover'
+                }}
               >
-                <Tab label="Create Session" value={'create'} sx={{ fontSize: '0.90rem', color: '#0e74d0', fontWeight: 600, textTransform: 'capitalize' }} />
-                <Tab label="Schedule Session" value={'schedule'} sx={{ fontSize: '0.90rem', color: '#0e74d0', fontWeight: 600, textTransform: 'capitalize' }} />
-              </TabListStyled>
-            </TabContext>
-          </Box>
-          <CardContent>
-            <form noValidate autoComplete='off' onSubmit={handleSubmit(onSubmit)}>
-              <InputLabel htmlFor='auth-login-v2-email' sx={{ fontSize: '0.90rem', mb: 1.5, color: '#0e74d0', fontWeight: 600 }}>Session Title</InputLabel>
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <Controller
-                  name='sessionTitle'
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field: { value, onChange, onBlur } }) => (
-                    <TextField
-                      autoFocus
-                      size='small'
-                      value={value}
-                      onBlur={onBlur}
-                      onChange={onChange}
-                      error={Boolean(errors.title)}
-                      placeholder='Enter title'
-                    />
-                  )}
-                />
-                {errors.sessionTitle && <FormHelperText sx={{ color: 'error.main', marginRight: '0', marginLeft: '0', fontSize: '0.75rem' }}>{errors.sessionTitle.message}</FormHelperText>}
-              </FormControl>
-              <InputLabel htmlFor='auth-login-v2-email' sx={{ fontSize: '0.90rem', mb: 1.5, color: '#0e74d0', fontWeight: 600 }}>Session Date</InputLabel>
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <Controller
-                  name='sessionDate'
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field: { value, onChange, onBlur } }) => (
-                    <DatePicker
-                      render={<InputIcon />}
-                      format="MM/DD/YYYY HH:mm:ss"
-                      showOtherDays
-                      minDate={new Date()}
-                      onChange={setSessionDate}
-                      value={sessionDate}
-                      plugins={[
-                        <TimePicker position="bottom" />,
-                        <DatePickerHeader position="left" />
-                      ]}
-                    />
-                  )}
-                />
-                {errors.sessionDate && <FormHelperText sx={{ color: 'error.main', marginRight: '0', marginLeft: '0', fontSize: '0.75rem' }}>{errors.sessionDate.message}</FormHelperText>}
-              </FormControl>
-              {tab === 'create' && previewForVideo === null && (
-                <>
-                  <InputLabel htmlFor='demo-simple-select-label' sx={{ fontSize: '0.90rem', mb: 1.5, color: '#0e74d0', fontWeight: 600 }}>Upload Session</InputLabel>
-
-                  <Button variant='outlined' component='label' sx={{ width: '100%', mb: 2, height: '100px' }}>
-                    <VideoFileIcon sx={{ color: '#0e74d0', fontSize: '2rem' }} />
-                    <input
-                      type='file'
-                      accept='video/*'
-                      hidden
-                      onChange={handleMediaChange}
-                    />
-                  </Button>
-                </>
-              )}
-              {previewForVideo !== null && (
-                <>
-                  <InputLabel htmlFor='demo-simple-select-label' sx={{ fontSize: '0.90rem', mb: 1.5, color: '#0e74d0', fontWeight: 600 }}> Preview Session</InputLabel>
-
-                  <Box sx={{ mt: 2, width: '100%', position: 'relative', mb: 2 }}>
-                    <Delete sx={{ color: 'red', fontSize: '2rem', position: 'absolute', top: 10, right: 10 }} style={{ zIndex: 1, cursor: 'pointer' }} onClick={() => setPreviewForVideo(null)} />
+                <Chip label={session?.sessionDate < fiveHoursLater ? 'Ongoing' : session?.sessionDate === fiveHoursLater ? 'Ended' : countdowns[session.sessionId] || 'loading..'}
+                  sx={{ position: 'absolute', bottom: '10px', right: '10px', fontWeight: 'bold', backgroundColor: session?.sessionDate < fiveHoursLater ? '#0E74D0' : session?.sessionDate === fiveHoursLater ? 'red' : '#98CFFD', color: 'white' }} variant='outlined' />
+                <CardContent>
+                  <Typography variant='h5' sx={{ mb: 3 }}>{session?.sessionTitle}</Typography>
+                  <Chip label={session?.subject} sx={{ mb: 3, fontWeight: 'bold', backgroundColor: '#98CFFD', color: 'white' }} />
+                  <Typography variant='body2'>{new Date(Number(session?.sessionDate)).toLocaleString()}</Typography>
+                  {session?.sessionContent && (
                     <video controls style={{ width: '100%', maxHeight: '300px' }}>
-                      <source src={previewForVideo} />
+                      <source src={session?.sessionContent} />
                     </video>
-                  </Box>
-                </>
-              )}
-              <InputLabel htmlFor='demo-simple-select-label' sx={{ fontSize: '0.90rem', mb: 1.5, color: '#0e74d0', fontWeight: 600 }}>{tab === 'create' ? 'Link' : 'Meet link'}</InputLabel>
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <Controller
-                  name='sessionLink'
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field: { value, onChange, onBlur } }) => (
-                    <TextField
-                      autoFocus
-                      value={value}
-                      size='small'
-                      onBlur={onBlur}
-                      onChange={onChange}
-                      placeholder={tab === 'create' ? 'Enter link' : 'Enter meet link'}
-                    />
                   )}
-                />
-              </FormControl>
-              <InputLabel htmlFor='demo-simple-select-label' sx={{ fontSize: '0.90rem', mb: 1.5, color: '#0e74d0', fontWeight: 600 }}>Subject</InputLabel>
-              <FormControl fullWidth>
-                <Controller
-                  name='subject'
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <Select
-                      size='small'
-                      labelId='demo-simple-select-label'
-                      id='demo-simple-select'
-                      sx={{ '& .css-1qffa26-MuiList-root-MuiMenu-list': { height: '300px !important' } }}
-                      {...field}
-                    >
-                      {subjects.map(subject => (
-                        <MenuItem key={subject.key} value={subject.value}>
-                          {subject.value}
-                        </MenuItem>
-                      ))}
-                    </Select>
+                  {session?.sessionLink && (
+                    <Link href={session?.sessionLink} target='_blank' rel='noopener' sx={{ textDecoration: 'none', fontWeight: 'bold' }}>
+                      {session?.sessionLink}
+                    </Link>
                   )}
-                />
-              </FormControl>
-              <Button type='submit' variant='contained' sx={{ width: '100%', mt: 4, textTransform: 'capitalize' }}>Create Session</Button>
-            </form>
-          </CardContent>
-        </Card>
+                  {
+                    session?.quizcontent && (
+                      <Button variant='outlined' sx={{ mt: 3, fontWeight: 'bold', mb: 4 }}>View Quiz</Button>
+                    )
+                  }
+                </CardContent>
+                <Box sx={{ position: 'absolute', top: '10px', right: '10px', '& .css-o01fge-MuiButtonBase-root-MuiButton-root': { p: 0, minWidth: '30px', height: '30px' } }}>
+                  <Button sx={{ width: '30px', height: '30px', px: 0, color: 'black' }} onClick={() => router.push(`/sessions/${session?.sessionId}`)}><RemoveRedEyeIcon /></Button>
+                  <Button onClick={() => { setEditSession(!editSession), setOpen(true) }} sx={{ width: '30px', height: '30px', px: 0 }}><ModeEditIcon /></Button>
+                  <Button sx={{ width: '30px', height: '30px', px: 0 }} color='error' onClick={() => deleteSession(session?.sessionId)}><DeleteIcon /></Button>
+                </Box>
+
+              </Card>
+            </Grid>
+          ))}
       </Grid>
-      <Grid item md={6} xs={12} >
-        {sessions && sessions?.length > 0 && sessions.map((session) => (
-          <Card key={session?.sessionId} style={{ marginBottom: '20px', cursor: 'pointer', backgroundImage: 'url(https://img.freepik.com/free-vector/watercolor-background-with-hand-drawn-elements_23-2148863701.jpg?size=626&ext=jpg&ga=GA1.1.2008272138.1721260800&semt=ais_user)', backgroundSize: 'cover' }} onClick={() => router.push(`/sessions/${session?.sessionId}`)}>
-            <CardContent>
-              <Typography variant="h5">{session?.sessionTitle}</Typography>
-              <Typography variant="subtitle1">{session?.subject}</Typography>
-              <Typography variant="body2">
-                {new Date(Number(session?.sessionDate)).toLocaleString()}
-              </Typography>
-              {session?.sessionContent && (
-                <video controls style={{ width: '100%', maxHeight: '300px' }}>
-                  <source src={session?.sessionContent} />
-                </video>
-              )}
-              {session?.sessionLink && (
-                <Link href={session?.sessionLink} target="_blank" rel="noopener">
-                  {session?.sessionLink}
-                </Link>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </Grid>
-    </Grid >
+      {
+        sessions?.length <= 0 && <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}><h2>No Sessions Found</h2></Box>
+      }
+      {
+        open ? (
+          <CreateSessionModal
+            previewForVideo={previewForVideo}
+            errors={errors}
+            control={control}
+            onSubmit={handleSubmit(onSubmit)}
+            handleMediaChange={handleMediaChange}
+            sessionDate={sessionDate}
+            setSessionDate={setSessionDate}
+            setPreviewForVideo={setPreviewForVideo}
+            tab={tab}
+            setTab={setTab}
+            edit={editSession}
+            handleChange={handleChange}
+            open={open}
+            setOpen={setOpen}
+            handleClose={handleClose}
+          />
+        ) : null
+      }
+      {
+        OpenQuiz ? (
+          <CreateQuizModal
+            previewForVideo={previewForVideo}
+            errors={errors}
+            control={control}
+            onSubmit={handleSubmit(onSubmit)}
+            handleMediaChange={handleMediaChange}
+            sessionDate={sessionDate}
+            setSessionDate={setSessionDate}
+            setPreviewForVideo={setPreviewForVideo}
+            tab={tab}
+            setTab={setTab}
+            handleChange={handleChange}
+            open={OpenQuiz}
+            setOpen={setOpenQuiz}
+            handleClose={handleCloseQuiz}
+            register={register}
+            fields={fields}
+            append={append}
+            remove={remove}
+          />
+        ) : null
+      }
+    </Box >
   )
 }
 

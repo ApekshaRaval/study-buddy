@@ -24,7 +24,7 @@ const upload = multer({ storage });
 module.exports = {
     createSession: async (req, res) => {
         try {
-            const { sessionTitle, sessionDate, sessionContent, sessionLink, teacherId, subject, sessionType } = req.body;
+            const { sessionTitle, sessionDate, sessionContent, sessionLink, teacherId, subject, sessionType, quizcontent } = req.body;
 
             if (!sessionTitle || !sessionDate || !teacherId || !subject || !sessionType) {
                 return res.status(400).json({
@@ -42,6 +42,7 @@ module.exports = {
                 "sessionTitle" VARCHAR(255) NOT NULL,
                 "sessionDate" VARCHAR(255) NOT NULL,
                 "sessionContent" VARCHAR(255),
+                 "quizcontent"character varying[]   ,
                 "sessionLink" VARCHAR(255),
                 "subject" VARCHAR(255) NOT NULL,
                  "sessionType" VARCHAR(255) NOT NULL,
@@ -50,8 +51,8 @@ module.exports = {
             await sails.sendNativeQuery(createSessionTable);
 
             const sessionId = uuidv4();
-            const createSession = `INSERT INTO "session" ("sessionId", "sessionTitle", "sessionDate", "sessionContent", "teacherId", "sessionLink", "subject","sessionType") VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`;
-            const data = await sails.sendNativeQuery(createSession, [sessionId, sessionTitle, sessionDate, sessionContent, teacherId, sessionLink, subject, sessionType]);
+            const createSession = `INSERT INTO "session" ("sessionId", "sessionTitle", "sessionDate", "sessionContent","quizcontent", "teacherId", "sessionLink", "subject","sessionType") VALUES ($1, $2, $3, $4, $5, $6, $7, $8 , $9) RETURNING *`;
+            const data = await sails.sendNativeQuery(createSession, [sessionId, sessionTitle, sessionDate, sessionContent, quizcontent, teacherId, sessionLink, subject, sessionType]);
 
             return res.status(HTTP_STATUS_CODE.OK).json({
                 status: HTTP_STATUS_CODE.OK,
@@ -88,9 +89,7 @@ module.exports = {
             const subjectClause = `SELECT subjects FROM "user" where id = $1`;
             const subjectData = await sails.sendNativeQuery(subjectClause, [req.params.id]);
             const subject = subjectData?.rows[0]?.subjects
-            const isSubjectDataIsNotEmpty = (subject) === '{}'
-            let arr = !isSubjectDataIsNotEmpty ? subject.replace(/[{}"]/g, '').split(',') : [];
-            const formattedSubjects = `(${arr.map(subject => `'${subject}'`).join(", ")})`;
+            const formattedSubjects = `(${subject.map(subject => `'${subject}'`).join(", ")})`;
             const sessionClause = `SELECT * FROM "session" where subject IN ${formattedSubjects}`;
             const data = await sails.sendNativeQuery(sessionClause);
             return res.status(HTTP_STATUS_CODE.OK).json({
@@ -161,7 +160,6 @@ module.exports = {
             }
             const SessionClause = `SELECT * FROM "session" WHERE "sessionId" = $1`;
             const data = await sails.sendNativeQuery(SessionClause, [req.params.id]);
-            console.log('data: ', data);
             return res.status(HTTP_STATUS_CODE.OK).json({
                 status: HTTP_STATUS_CODE.OK,
                 errorCode: "SUC000",
@@ -180,32 +178,32 @@ module.exports = {
             });
         }
     },
-    uploadFile: async function (req, res) {
-        console.log('req: ', req?.file);
-        upload.single('file')(req, res, async function (err) {
-            if (err) {
-                console.log('err: ', err);
-                return res.serverError(err);
-            }
+    deleteSession: async (req, res) => {
+        const { id } = req.params
 
-            // Save file information to the database
-            try {
-                console.log('req.file.filename: ', req.file.filename);
-                const file = await File.create({
-                    filename: req.file.filename,
-                    path: req.file.path,
-                    size: req.file.size
-                }).fetch();
+        try {
+            const deletedSessionClause = `DELETE FROM "session" WHERE "sessionId" = $1`;
+            const deletedSession = await sails.sendNativeQuery(deletedSessionClause, [id]);
+            return res.status(HTTP_STATUS_CODE.OK).json({
+                status: HTTP_STATUS_CODE.OK,
+                errorCode: "SUC000",
+                message: "Session Deleted Successfully",
+                data: deletedSession,
+                error: "",
+            });
+        } catch (err) {
+            console.error(err);
+            return res.status(HTTP_STATUS_CODE.SERVER_ERROR).json({
+                status: HTTP_STATUS_CODE.SERVER_ERROR,
+                errorCode: "ERR500",
+                message: "Internal Server Error!",
+                data: null,
+                error: err,
+            });
+        }
 
-                return res.json({
-                    status: 'success',
-                    file
-                });
-            } catch (error) {
-                return res.serverError(error);
-            }
-        });
     }
+
 }
 
 

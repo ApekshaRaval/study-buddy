@@ -36,7 +36,8 @@ const AuthProvider = ({ children }) => {
       if (storedToken) {
         try {
           setLoading(true)
-          const response = await fetch("http://localhost:1337/auth/user", {
+          const id = JSON.parse(window.localStorage.getItem('userData')).id
+          const response = await fetch(`http://localhost:1337/api/user-detail/${id}`, {
             method: 'GET',
             headers: {
               'Authorization': 'Bearer ' + storedToken

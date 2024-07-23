@@ -38,11 +38,11 @@ module.exports = {
       required: true,
       columnName: 'isLoggedIn',
     },
-    accessToken: {
+    token: {
       type: 'string',
       allowNull: true,
       columnType: 'text',
-      columnName: 'accessToken',
+      columnName: 'token',
     },
     role: {
       type: 'string',
@@ -57,10 +57,10 @@ module.exports = {
       type: 'ref',
       columnType: 'character varying[]',
     },
-    avatarUrl: {
-      type: 'string'
+    profilePicUrl: {
+      type: 'string',
     },
-    avatarFd: {
+    profilePicFd: {
       type: 'string'
     }
     //  ╔═╗╦═╗╦╔╦╗╦╔╦╗╦╦  ╦╔═╗╔═╗

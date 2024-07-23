@@ -26,6 +26,10 @@ module.exports = {
       type: 'string',
       columnType: 'varchar(5000)',
     },
+    quizcontent: {
+      type: 'ref',
+      columnType: 'character varying[]',
+    },
     sessionLink: {
       type: 'string',
       columnType: 'varchar(5000)',
