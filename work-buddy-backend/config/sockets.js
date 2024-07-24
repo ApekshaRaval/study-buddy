@@ -43,7 +43,7 @@
 //   *                                                                          *
 //   ***************************************************************************/
 
-//   // transports: [ 'websocket' ],
+//   transports: ['websocket'],
 
 
 //   /***************************************************************************
@@ -97,6 +97,20 @@
 
 // };
 
+// // module.exports.sockets = {
+// //   beforeConnect: function (handshake, proceed) {
+// //     console.log('New WebSocket connection attempt:');
+// //     return proceed(undefined, true);
+// //   },
+
+// //   afterDisconnect: function (session, socket, done) {
+// //     console.log('WebSocket disconnected:', socket.id);
+// //     done();
+// //   },
+
+// //   onlyAllowOrigins: ['http://localhost:3000'],
+// // };
+// config/sockets.js
 module.exports.sockets = {
   beforeConnect: function (handshake, proceed) {
     console.log('New WebSocket connection attempt:');
@@ -109,4 +123,10 @@ module.exports.sockets = {
   },
 
   onlyAllowOrigins: ['http://localhost:3000'],
+
+
+  transports: ['websocket'],
+
 };
+
+

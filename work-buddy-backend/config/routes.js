@@ -22,8 +22,8 @@ const AuthRouter = {
     'GET /get-profile/:id': 'AuthController.getProfile',
 }
 const chatRouter = {
-    'POST /api/message': 'ChatController.sendMessage',
-    'GET /api/messages': 'ChatController.getMessages',
+    'POST /chat/send': 'ChatController.sendMessage',
+    'GET /chat/message': 'ChatController.getMessages'
 }
 const sessionRouter = {
     'POST /api/create-session': 'SessionController.createSession',

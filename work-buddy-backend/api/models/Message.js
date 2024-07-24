@@ -1,25 +1,12 @@
 /**
- * Chat.js
+ * Message.js
  *
  * @description :: A model definition represents a database table/collection.
  * @docs        :: https://sailsjs.com/docs/concepts/models-and-orm/models
  */
 
 module.exports = {
-    tableName: 'chats',
     attributes: {
-        id: {
-            type: 'string',
-            required: true,
-        },
-        senderId: {
-            type: 'string',
-            required: true,
-        },
-        receiverId: {
-            type: 'string',
-            required: true,
-        },
         text: {
             type: 'string',
         },
@@ -30,16 +17,14 @@ module.exports = {
             type: 'boolean',
         },
         video: {
-            type: 'string',
+            type: 'boolean',
         },
         seen: {
             type: 'boolean',
             required: true,
         },
-        createdAt: {
-            type: 'ref',
-            columnType: 'timestamp',
-            autoCreatedAt: true, // Automatically set createdAt timestamp
-        },
+        chat: {
+            model: 'chat'  // Reference back to the Chat model
+        }
     },
 };

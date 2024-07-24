@@ -19,7 +19,14 @@ module.exports.session = {
   *                                                                          *
   ***************************************************************************/
   secret: '6009f7f5a1737fe2339d44bc34bd4e62',
-
+  // Redis server URL
+  cookie: {
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  },
+  // Add logging for session events
+  onSessionError: function (err) {
+    sails.log.error('Session error:', err);
+  }
 
   /***************************************************************************
   *                                                                          *

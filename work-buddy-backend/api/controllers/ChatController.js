@@ -1,11 +1,14 @@
-const { v4: uuidv4 } = require('uuid');
-const Chat = require('../models/Chat');
-const sails = require('sails');
+const { v4: uuidv4 } = require("uuid");
+const Chat = require("../models/Chat");
+const sails = require("sails");
 
 module.exports = {
+
+
     sendMessage: async (req, res) => {
-        const { message, senderId, receiverId } = req.body;
-        if (!message || !senderId || !receiverId) {
+        const { senderId, receiverId, text, image, video, call = false, seen = false } = req.body;
+
+        if (!senderId || !receiverId) {
             return res.status(400).json({
                 status: 400,
                 errorCode: "ERR400",
@@ -15,10 +18,32 @@ module.exports = {
             });
         }
 
+        const createChatTable = `CREATE TABLE IF NOT EXISTS "chats" (
+            id VARCHAR(255) PRIMARY KEY,
+            text VARCHAR(255),
+            image VARCHAR(255),
+            call BOOLEAN,
+            video VARCHAR(255),
+            seen BOOLEAN,
+            senderId VARCHAR(255) NOT NULL,
+            receiverId VARCHAR(255) NOT NULL,
+            createdAt TIMESTAMP DEFAULT current_timestamp
+        )`;
+
+        await sails.sendNativeQuery(createChatTable);
+
         try {
             const messageId = uuidv4();
-            const newMessage = await Chat.create({ messageId, message, senderId, receiverId }).fetch();
-            sails.sockets.broadcast('chat', 'message', newMessage);
+            console.log("messageId: ", messageId);
+            const chatClause = `INSERT INTO "chats" (id, senderId, receiverId, text, image, call, video, seen) VALUES ('${messageId}', '${senderId}', '${receiverId}', '${text}', '${image}', '${call}', '${video}', '${seen}') RETURNING *`;
+
+            const result = await sails.sendNativeQuery(chatClause);
+            console.log('result: ', result);
+            const newMessage = result.rows[0];
+            console.log("newMessage: ", newMessage);
+
+            sails.sockets.broadcast(receiverId, "message", newMessage);
+            sails.sockets.broadcast(senderId, "message", newMessage);
 
             return res.status(200).json({
                 status: 200,
@@ -28,6 +53,7 @@ module.exports = {
                 error: "",
             });
         } catch (err) {
+            console.log("err: ", err);
             return res.status(500).json({
                 status: 500,
                 errorCode: "ERR500",
@@ -39,6 +65,7 @@ module.exports = {
     },
 
     getMessages: async (req, res) => {
+        console.log("cajjjj")
         try {
             const { senderId, receiverId } = req.query;
             if (!senderId || !receiverId) {
@@ -52,8 +79,9 @@ module.exports = {
             }
 
             // Check if the chats table exists
-            const query = `SELECT * from chats`;
+            const query = `SELECT * FROM chats`;
             const result = await sails.sendNativeQuery(query);
+            console.log('query: ', result);
 
             if (result.rows.length === 0) {
                 return res.status(200).json({
@@ -64,15 +92,14 @@ module.exports = {
                     error: "",
                 });
             }
-            // Fetch messages
-            const messages = await Chat.find({
-                or: [
-                    { senderId, receiverId },
-                    { senderId: receiverId, receiverId: senderId }
-                ]
-            });
 
-            if (messages.length === 0) {
+            // Fetch messages
+            const queryClause = `SELECT * FROM "chats" WHERE (senderid = '${senderId}' AND receiverid = '${receiverId}') OR (senderid = '${receiverId}' AND receiverid = '${senderId}')`;
+            console.log('queryClause: ', queryClause);
+            const messages = await sails.sendNativeQuery(queryClause);
+            console.log("messages: ", messages);
+
+            if (messages.rows.length === 0) {
                 return res.status(200).json({
                     status: 200,
                     errorCode: "SUC002",
@@ -86,7 +113,7 @@ module.exports = {
                 status: 200,
                 errorCode: "SUC000",
                 message: "Success",
-                data: messages,
+                data: messages.rows,
                 error: "",
             });
         } catch (err) {
@@ -100,3 +127,4 @@ module.exports = {
         }
     },
 };
+
