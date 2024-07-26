@@ -12,7 +12,6 @@ const Profile = () => {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [profilePicUrl, setProfilePicUrl] = useState('');
-    console.log('profilePicUrl: ', profilePicUrl);
     const { user } = useAuth()
     const BASE_URL = 'http://localhost:1337';
 
@@ -35,19 +34,20 @@ const Profile = () => {
             throw error;
         }
     };
-    useEffect(() => {
-        const fetchProfilePic = async () => {
-            try {
-                const response = await fetch(`${BASE_URL}/get-profile/${user?.id}`, { responseType: 'blob' });
-                const url = URL.createObjectURL(new Blob([response.data]));
-                setProfilePicUrl(url);
-            } catch (error) {
-                console.error('Error fetching profile picture:', error);
-            }
-        };
 
-        fetchProfilePic();
-    }, [user?.id]);
+    // useEffect(() => {
+    //     const fetchProfilePic = async () => {
+    //         try {
+    //             const response = await fetch(`${BASE_URL}/api/user-detail/${user?.id}`, { responseType: 'blob' });
+    //             const url = URL.createObjectURL(new Blob([response.data]));
+    //             setProfilePicUrl(url);
+    //         } catch (error) {
+    //             console.error('Error fetching profile picture:', error);
+    //         }
+    //     };
+
+    //     fetchProfilePic();
+    // }, [user?.id]);
 
 
 

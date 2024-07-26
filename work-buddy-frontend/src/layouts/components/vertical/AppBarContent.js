@@ -1,5 +1,5 @@
 // ** MUI Imports
-import { Typography } from '@mui/material'
+import { Badge, Typography } from '@mui/material'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 
@@ -11,10 +11,15 @@ import ModeToggler from 'src/@core/layouts/components/shared-components/ModeTogg
 import UserDropdown from 'src/@core/layouts/components/shared-components/UserDropdown'
 // ** Configs
 import themeConfig from 'src/configs/themeConfig'
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import { useAuth } from 'src/hooks/useAuth'
+import { useEffect, useState } from 'react'
+import NotificationDropdown from 'src/@core/layouts/components/shared-components/NotificationDropdown'
 
 const AppBarContent = props => {
   // ** Props
   const { hidden, settings, saveSettings, toggleNavVisibility } = props
+
 
 
   return (
@@ -42,7 +47,11 @@ const AppBarContent = props => {
       >
         {themeConfig.templateName}
       </Typography>
-      <Box className='actions-right' sx={{ display: 'flex', alignItems: 'center' }}>
+      <Box className='actions-right' sx={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        {/* <Badge badgeContent={4} color="secondary">
+          <NotificationsActiveIcon sx={{ color: '#0E74D0', fontSize: '1.5rem' }} />
+        </Badge> */}
+        <NotificationDropdown settings={settings} />
         <UserDropdown settings={settings} />
       </Box>
     </Box>

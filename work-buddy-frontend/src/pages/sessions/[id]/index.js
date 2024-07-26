@@ -1,4 +1,4 @@
-import { Card, CardContent, Link, Typography, Grid, IconButton, Button, Box, Chip } from "@mui/material";
+import { Card, CardContent, Link, Typography, Grid, IconButton, Button, Box, Chip, useMediaQuery } from "@mui/material";
 import { useEffect, useState } from "react";
 import { ROLE_TEACHER } from "src/constants/constant";
 import { useAuth } from "src/hooks/useAuth";
@@ -12,7 +12,7 @@ const SessionDetailPage = ({ params }) => {
     const [session, setSession] = useState();
     const [teacherDetail, setTeacherDetail] = useState();
     const quiz = session?.quizcontent
-    console.log('quiz: ', quiz);
+    const isSmallScreen = useMediaQuery((theme) => theme.breakpoints.down('sm'));
     const router = useRouter()
     const fetchTeacherDetail = async (id) => {
         const response = await fetch(`http://localhost:1337/api/user-detail/${id}`, {
@@ -72,7 +72,7 @@ const SessionDetailPage = ({ params }) => {
             <Card style={{
                 margin: '20px', padding: '20px', boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)', backgroundImage:
                     'url(https://img.freepik.com/premium-photo/white-flowers-background_853558-41364.jpg)',
-                backgroundSize: 'cover', position: 'relative'
+                backgroundSize: 'cover', position: 'relative', height: '600px'
             }}>
 
                 <CardContent>
@@ -86,13 +86,6 @@ const SessionDetailPage = ({ params }) => {
                                 sx={{ display: 'flex', alignItems: 'center', gap: 2, position: 'absolute', right: '10px', top: '20px', fontWeight: 'bold', backgroundColor: '#0E74D0', color: 'white' }}
                             />
 
-                            {session?.sessionContent && (
-                                <div style={{ position: 'relative', paddingTop: '56.25%' }}>
-                                    <video controls style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
-                                        <source src={session?.sessionContent} />
-                                    </video>
-                                </div>
-                            )}
                             {session?.sessionLink && (
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                     <Link href={session?.sessionLink} target="_blank" rel="noopener">
@@ -103,7 +96,7 @@ const SessionDetailPage = ({ params }) => {
                                     </Link>
                                 </Box>
                             )}
-                            {session?.quizcontent && <QuestionAnswerList data={session?.quizcontent} />}
+                            {session?.quizcontent && session?.quizcontent?.length > 0 && <QuestionAnswerList data={session?.quizcontent} />}
                         </Grid>
                         <Grid item xs={12} sm={6}>
                             <Typography variant="h5" gutterBottom sx={{ color: 'primary.main' }}>Teacher</Typography>
@@ -113,6 +106,13 @@ const SessionDetailPage = ({ params }) => {
                             </Typography>
                         </Grid>
                     </Grid>
+                    {session?.sessionContent && (
+                        <Box style={{ position: 'relative', paddingTop: '56.25%', marginTop: '20px' }}>
+                            <video controls style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: isSmallScreen ? '100%' : '50%', borderRadius: '10px' }}>
+                                <source src={session?.sessionContent} />
+                            </video>
+                        </Box>
+                    )}
                 </CardContent>
             </Card >
         </>

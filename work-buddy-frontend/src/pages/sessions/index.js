@@ -32,16 +32,18 @@ const SessionsPage = () => {
   const [tab, setTab] = useState('create')
   const { user } = useAuth()
   const [sessionDate, setSessionDate] = useState()
+  const [sessionStartTime, setSessionStartTime] = useState(new Date().getTime())
+  const [sessionEndTime, setSessionEndTime] = useState(new Date().getTime())
   const [sessions, setSessions] = useState()
   const router = useRouter()
   const [editSession, setEditSession] = useState(false)
+  const [users, setUsers] = useState([])
 
   const handleChange = (event, newValue) => {
     setTab(newValue)
     setPreviewForVideo(null), reset()
   }
   // ** Hooks
-  const ability = useContext(AbilityContext)
   const schema = yup.object().shape({
     sessionTitle: yup.string().required()
   })
@@ -61,6 +63,7 @@ const SessionsPage = () => {
   }
   const handleClose = () => {
     setOpen(false)
+    setPreviewForVideo(null), reset()
   }
 
   const {
@@ -85,14 +88,16 @@ const SessionsPage = () => {
     name: "quizcontent",
   });
 
-  const sendNotification = async () => {
+  const sendNotification = async (selectedUser, message) => {
     const response = await fetch('http://localhost:1337/api/send-notification', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        senderId: user?.id
+        senderid: user?.id,
+        receiverid: selectedUser,
+        message
       })
     })
     const responseData = await response.json()
@@ -103,67 +108,88 @@ const SessionsPage = () => {
     }
   }
 
-  const onSubmit = async data => {
-    const payload = {
-      sessionTitle: data?.sessionTitle,
-      sessionDate: Number(sessionDate?.valueOf()),
-      sessionContent: previewForVideo,
-      sessionLink: data?.sessionLink,
-      teacherId: user?.id,
-      subject: data?.subject,
-      sessionType: tab,
-      quizcontent: data?.quizcontent
-    }
+  const fetchAllUsers = async () => {
+    try {
+      const fetchResponse = fetch('http://localhost:1337/users', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          authorization: `Bearer ${window.localStorage.getItem('accessToken')}`
+        }
+      })
 
-    const response = await fetch('http://localhost:1337/api/create-session', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    })
-
-    const responseData = await response.json()
-    if (responseData?.status === 200 || responseData?.errorCode === 'SUC000') {
-      toast.success(responseData.message)
-      router.push('/dashboard')
-    } else {
-      toast.error(responseData.message)
-    }
-  }
-
-  const handleMediaChange = event => {
-    const file = event.target.files[0]
-    if (file) {
-      const previewUrl = URL.createObjectURL(file)
-      setPreviewForVideo(previewUrl)
-      UploadFile(file)
-    }
-  }
-
-  const UploadFile = async file => {
-    const formData = new FormData()
-    formData.append('file', file)
-    const response = await fetch('http://localhost:1337/api/upload', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${user?.token}`,
-        'Content-Type': 'multipart/form-data'
-      },
-      body: formData
-    })
-    const responseData = await response.json()
-    if (responseData?.status === 200 || responseData?.errorCode === 'SUC000') {
-      toast.success(responseData.message)
-    } else {
-      toast.error(responseData.message)
+      const response = await fetchResponse
+      const data = await response.json()
+      const users = data?.data?.filter(users => users.id !== user?.id)
+      setUsers(users)
+    } catch (err) {
+      console.log('err: ', err)
     }
   }
 
   useEffect(() => {
+    fetchAllUsers()
+  }, [])
+
+  const onSubmit = async (data) => {
+    try {
+      const payload = {
+        sessionTitle: data?.sessionTitle,
+        sessionDate: Number(sessionDate?.valueOf()),
+        startTime: Number(sessionStartTime?.valueOf()),
+        endTime: Number(sessionEndTime?.valueOf()),
+        sessionContent: previewForVideo,
+        sessionLink: data?.sessionLink,
+        teacherId: user?.id,
+        subject: data?.subject,
+        sessionType: tab,
+        quizcontent: data?.quizcontent
+      };
+
+      const response = await fetch('http://localhost:1337/api/create-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const responseData = await response.json();
+      if (responseData?.status === 200 || responseData?.errorCode === 'SUC000') {
+        toast.success(responseData.message);
+        setOpen(false)
+        setPreviewForVideo(null)
+        reset()
+        fetchSessions()
+        if (users?.length > 0) {
+          const filteredUsers = users?.filter(user => user.role === 'student' && user.subjects?.includes(data?.subject)).map(user => user.id);
+          const message = `${user?.userName} has created a new session!`;
+          await sendNotification(filteredUsers, message);
+        }
+      } else {
+        toast.error(responseData.message);
+      }
+
+    } catch (error) {
+      console.log('error: ', error);
+      toast.error("An error occurred while creating the session");
+      console.error(error);
+    }
+  };
+
+
+  const handleMediaChange = async (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setPreviewForVideo(previewUrl);
+    }
+  };
+
+  useEffect(() => {
     const interval = setInterval(() => {
       const newCountdowns = {};
-      sessions.forEach(session => {
+      sessions && sessions.forEach(session => {
         const sessionTime = new Date(Number(session.sessionDate)).getTime();
         const now = new Date().getTime();
         const timeDiff = sessionTime - now;
@@ -182,23 +208,34 @@ const SessionsPage = () => {
 
     return () => clearInterval(interval);
   }, [sessions]);
+
   const fetchSessions = async () => {
-    const response = await fetch(`http://localhost:1337/api/teacher-sessions/${user?.id}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${user?.token}`
+    try {
+      const response = await fetch(`http://localhost:1337/api/teacher-sessions/${user?.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user?.token}`
+        }
+      });
+
+      const data = await response.json();
+      if (data?.status === 200) {
+        setSessions(data?.data?.rows);
+      } else {
+        toast.error(data?.message || "Failed to fetch sessions");
       }
-    })
-    const data = await response.json()
-    if (data?.status === 200) {
-      setSessions(data?.data?.rows)
+    } catch (error) {
+      toast.error("An error occurred while fetching sessions");
+      console.error(error);
     }
-  }
+  };
+
 
   useEffect(() => {
     fetchSessions()
   }, [])
+
   const deleteSession = async (sessionId) => {
     const response = await fetch(`http://localhost:1337/api/delete-session/${sessionId}`, {
       method: 'DELETE',
@@ -235,9 +272,6 @@ const SessionsPage = () => {
                   position: 'relative',
                   minWidth: { xs: '100%', lg: '300px', md: '400px' },
                   width: '100%',
-                  height: '230px',
-                  display: 'flex',
-                  alignItems: 'center',
                   marginBottom: '20px',
                   cursor: 'pointer',
                   backgroundImage:
@@ -250,20 +284,40 @@ const SessionsPage = () => {
                 <CardContent>
                   <Typography variant='h5' sx={{ mb: 3 }}>{session?.sessionTitle}</Typography>
                   <Chip label={session?.subject} sx={{ mb: 3, fontWeight: 'bold', backgroundColor: '#98CFFD', color: 'white' }} />
-                  <Typography variant='body2'>{new Date(Number(session?.sessionDate)).toLocaleString()}</Typography>
+                  <Typography variant='body2' sx={{ mb: 3, fontWeight: 'bold', fontFamily: 'monospace' }}>
+                    {new Date(Number(session?.sessionDate)).toDateString()}
+                    {session?.sessionType === 'schedule' && (
+                      <>
+                        {' - '}
+                        {new Date(Number(session?.startTime)).getHours().toString().padStart(2, '0')}:
+                        {new Date(Number(session?.startTime)).getMinutes().toString().padStart(2, '0')}
+                        {' to '}
+                        {new Date(Number(session?.endTime)).getHours().toString().padStart(2, '0')}:
+                        {new Date(Number(session?.endTime)).getMinutes().toString().padStart(2, '0')}
+                      </>
+                    )}
+                  </Typography>
+
+
                   {session?.sessionContent && (
-                    <video controls style={{ width: '100%', maxHeight: '300px' }}>
-                      <source src={session?.sessionContent} />
-                    </video>
+                    <Box sx={{ mb: 4 }}>
+                      <video controls style={{ width: '100%', maxHeight: '300px', borderRadius: '10px' }}>
+                        <source src={session?.sessionContent} />
+                      </video>
+                    </Box>
                   )}
                   {session?.sessionLink && (
-                    <Link href={session?.sessionLink} target='_blank' rel='noopener' sx={{ textDecoration: 'none', fontWeight: 'bold' }}>
-                      {session?.sessionLink}
-                    </Link>
+                    <Box sx={{ mb: 4 }}>
+                      <Link href={session?.sessionLink} target='_blank' rel='noopener' sx={{ textDecoration: 'none', fontWeight: 'bold' }}>
+                        {session?.sessionLink}
+                      </Link>
+                    </Box>
                   )}
                   {
-                    session?.quizcontent && (
-                      <Button variant='outlined' sx={{ mt: 3, fontWeight: 'bold', mb: 4 }}>View Quiz</Button>
+                    session?.quizcontent && session?.quizcontent.length > 0 && (
+                      <Box sx={{ mb: 4 }}>
+                        <Button variant='outlined' sx={{ mt: 3, fontWeight: 'bold', mb: 4 }}>View Quiz</Button>
+                      </Box>
                     )
                   }
                 </CardContent>
@@ -298,6 +352,10 @@ const SessionsPage = () => {
             open={open}
             setOpen={setOpen}
             handleClose={handleClose}
+            sessionEndTime={sessionEndTime}
+            sessionStartTime={sessionStartTime}
+            setSessionEndTime={setSessionEndTime}
+            setSessionStartTime={setSessionStartTime}
           />
         ) : null
       }

@@ -1,7 +1,4 @@
-// ** React Imports
-import { useState, Fragment } from 'react'
-
-// ** MUI Imports
+import { useState, Fragment, useEffect } from 'react'
 import Box from '@mui/material/Box'
 import Badge from '@mui/material/Badge'
 import Button from '@mui/material/Button'
@@ -11,21 +8,14 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import MuiMenu from '@mui/material/Menu'
 import MuiMenuItem from '@mui/material/MenuItem'
 import Typography from '@mui/material/Typography'
-
-// ** Icon Imports
 import Icon from 'src/@core/components/icon'
-
-// ** Third Party Components
 import PerfectScrollbarComponent from 'react-perfect-scrollbar'
-
-// ** Custom Components Imports
 import CustomChip from 'src/@core/components/mui/chip'
 import CustomAvatar from 'src/@core/components/mui/avatar'
-
-// ** Util Import
 import { getInitials } from 'src/@core/utils/get-initials'
+import toast from 'react-hot-toast'
+import { useAuth } from 'src/hooks/useAuth'
 
-// ** Styled Menu component
 const Menu = styled(MuiMenu)(({ theme }) => ({
   '& .MuiMenu-paper': {
     width: 380,
@@ -40,7 +30,6 @@ const Menu = styled(MuiMenu)(({ theme }) => ({
   }
 }))
 
-// ** Styled MenuItem component
 const MenuItem = styled(MuiMenuItem)(({ theme }) => ({
   paddingTop: theme.spacing(3),
   paddingBottom: theme.spacing(3),
@@ -49,19 +38,16 @@ const MenuItem = styled(MuiMenuItem)(({ theme }) => ({
   }
 }))
 
-// ** Styled PerfectScrollbar component
 const PerfectScrollbar = styled(PerfectScrollbarComponent)({
   maxHeight: 344
 })
 
-// ** Styled Avatar component
 const Avatar = styled(CustomAvatar)({
   width: 38,
   height: 38,
   fontSize: '1.125rem'
 })
 
-// ** Styled component for the title in MenuItems
 const MenuItemTitle = styled(Typography)(({ theme }) => ({
   fontWeight: 600,
   flex: '1 1 100%',
@@ -72,7 +58,6 @@ const MenuItemTitle = styled(Typography)(({ theme }) => ({
   marginBottom: theme.spacing(0.75)
 }))
 
-// ** Styled component for the subtitle in MenuItems
 const MenuItemSubtitle = styled(Typography)({
   flex: '1 1 100%',
   overflow: 'hidden',
@@ -89,17 +74,23 @@ const ScrollWrapper = ({ children, hidden }) => {
 }
 
 const NotificationDropdown = props => {
-  // ** Props
-  const { settings, notifications } = props
-
-  // ** States
+  const { settings } = props
+  const { user } = useAuth()
+  const [notifications, setNotifications] = useState([])
   const [anchorEl, setAnchorEl] = useState(null)
-
-  // ** Hook
   const hidden = useMediaQuery(theme => theme.breakpoints.down('lg'))
-
-  // ** Vars
   const { direction } = settings
+
+  // Request notification permission
+  const requestNotificationPermission = async () => {
+    if (Notification.permission === 'default') {
+      try {
+        await Notification.requestPermission()
+      } catch (err) {
+        console.error('Notification permission request error:', err)
+      }
+    }
+  }
 
   const handleDropdownOpen = event => {
     setAnchorEl(event.currentTarget)
@@ -109,22 +100,56 @@ const NotificationDropdown = props => {
     setAnchorEl(null)
   }
 
-  const RenderAvatar = ({ notification }) => {
-    const { avatarAlt, avatarImg, avatarIcon, avatarText, avatarColor } = notification
-    if (avatarImg) {
-      return <Avatar alt={avatarAlt} src={avatarImg} />
-    } else if (avatarIcon) {
-      return (
-        <Avatar skin='light' color={avatarColor}>
-          {avatarIcon}
-        </Avatar>
-      )
-    } else {
-      return (
-        <Avatar skin='light' color={avatarColor}>
-          {getInitials(avatarText)}
-        </Avatar>
-      )
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch(`http://localhost:1337/api/get-notifications/${user?.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'authorization': `Bearer ${user?.token}`
+        }
+      })
+      const data = await response.json()
+      if (data?.status === 200) {
+        setNotifications(data?.data?.rows)
+        // Display notifications
+        data?.data?.rows.forEach(notification => {
+          if (notification?.seen === false) {
+            if (Notification.permission === 'granted') {
+              new Notification("New Notification", {
+                body: notification.message,
+              })
+            }
+          }
+        })
+      }
+    } catch (err) {
+      console.log('err: ', err)
+    }
+  }
+
+  useEffect(() => {
+    requestNotificationPermission()
+    fetchNotifications()
+  }, [user])
+
+  const handleReadNotification = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:1337/api/update-notification/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'authorization': `Bearer ${user?.token}`
+        },
+        body: JSON.stringify({ seen: true })
+      })
+      const data = await response.json()
+      if (data?.status === 200) {
+        fetchNotifications()
+        toast.success(data?.message)
+      }
+    } catch (err) {
+      console.log('err: ', err)
     }
   }
 
@@ -133,6 +158,7 @@ const NotificationDropdown = props => {
       <IconButton color='inherit' aria-haspopup='true' onClick={handleDropdownOpen} aria-controls='customized-menu'>
         <Badge
           color='error'
+          content={notifications?.length}
           variant='dot'
           invisible={!notifications.length}
           sx={{
@@ -168,15 +194,12 @@ const NotificationDropdown = props => {
         </MenuItem>
         <ScrollWrapper hidden={hidden}>
           {notifications.map((notification, index) => (
-            <MenuItem key={index} onClick={handleDropdownClose}>
+            <MenuItem key={index} onClick={() => handleReadNotification(notification.notificationid)}>
               <Box sx={{ width: '100%', display: 'flex', alignItems: 'center' }}>
-                <RenderAvatar notification={notification} />
                 <Box sx={{ mx: 4, flex: '1 1', display: 'flex', overflow: 'hidden', flexDirection: 'column' }}>
-                  <MenuItemTitle>{notification.title}</MenuItemTitle>
-                  <MenuItemSubtitle variant='body2'>{notification.subtitle}</MenuItemSubtitle>
+                  <MenuItemTitle>{notification.message}</MenuItemTitle>
                 </Box>
                 <Typography variant='caption' sx={{ color: 'text.disabled' }}>
-                  {notification.meta}
                 </Typography>
               </Box>
             </MenuItem>
@@ -195,7 +218,7 @@ const NotificationDropdown = props => {
           }}
         >
           <Button fullWidth variant='contained' onClick={handleDropdownClose}>
-            Read All Notifications
+            Close
           </Button>
         </MenuItem>
       </Menu>

@@ -24,11 +24,11 @@ const upload = multer({ storage });
 module.exports = {
     createSession: async (req, res) => {
         try {
-            const { sessionTitle, sessionDate, sessionContent, sessionLink, teacherId, subject, sessionType, quizcontent } = req.body;
+            const { sessionTitle, sessionDate, sessionContent, sessionLink, teacherId, subject, sessionType, quizcontent, startTime, endTime } = req.body;
 
             if (!sessionTitle || !sessionDate || !teacherId || !subject || !sessionType) {
-                return res.status(400).json({
-                    status: 400,
+                return res.status(HTTP_STATUS_CODE.BAD_REQUEST).json({
+                    status: HTTP_STATUS_CODE.BAD_REQUEST,
                     errorCode: "ERR400",
                     message: "Missing required fields",
                     data: null,
@@ -36,23 +36,43 @@ module.exports = {
                 });
             }
 
-            const createSessionTable = `CREATE TABLE IF NOT EXISTS "session" (
-                "sessionId" VARCHAR(255) PRIMARY KEY,
-                "teacherId" VARCHAR(255) NOT NULL,
-                "sessionTitle" VARCHAR(255) NOT NULL,
-                "sessionDate" VARCHAR(255) NOT NULL,
-                "sessionContent" VARCHAR(255),
-                 "quizcontent"character varying[]   ,
-                "sessionLink" VARCHAR(255),
-                "subject" VARCHAR(255) NOT NULL,
-                 "sessionType" VARCHAR(255) NOT NULL,
-                FOREIGN KEY ("teacherId") REFERENCES "user" ("id")
+            const createSessionTable = `
+            CREATE TABLE IF NOT EXISTS "session" (
+              "sessionId" VARCHAR(255) PRIMARY KEY,
+              "teacherId" VARCHAR(255) NOT NULL,
+              "sessionTitle" VARCHAR(255) NOT NULL,
+              "sessionDate" VARCHAR(255) NOT NULL,
+              "startTime" VARCHAR(255) NOT NULL,
+              "endTime" VARCHAR(255) NOT NULL,
+              "sessionContent" VARCHAR(255),
+              "quizcontent" VARCHAR(255)[],
+              "sessionLink" VARCHAR(255),
+              "subject" VARCHAR(255) NOT NULL,
+              "sessionType" VARCHAR(255) NOT NULL,
+              FOREIGN KEY ("teacherId") REFERENCES "user" ("id")
             )`;
+
             await sails.sendNativeQuery(createSessionTable);
 
             const sessionId = uuidv4();
-            const createSession = `INSERT INTO "session" ("sessionId", "sessionTitle", "sessionDate", "sessionContent","quizcontent", "teacherId", "sessionLink", "subject","sessionType") VALUES ($1, $2, $3, $4, $5, $6, $7, $8 , $9) RETURNING *`;
-            const data = await sails.sendNativeQuery(createSession, [sessionId, sessionTitle, sessionDate, sessionContent, quizcontent, teacherId, sessionLink, subject, sessionType]);
+            const createSessionQuery = `
+            INSERT INTO "session" 
+            ("sessionId", "sessionTitle", "sessionDate","startTime", "endTime" ,"sessionContent", "quizcontent", "teacherId", "sessionLink", "subject", "sessionType")
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`;
+
+            const data = await sails.sendNativeQuery(createSessionQuery, [
+                sessionId,
+                sessionTitle,
+                sessionDate,
+                startTime,
+                endTime,
+                sessionContent,
+                quizcontent,
+                teacherId,
+                sessionLink,
+                subject,
+                sessionType
+            ]);
 
             return res.status(HTTP_STATUS_CODE.OK).json({
                 status: HTTP_STATUS_CODE.OK,
@@ -62,7 +82,7 @@ module.exports = {
                 error: "",
             });
         } catch (err) {
-            console.log(err);
+            console.error('Error creating session:', err);
             return res.status(HTTP_STATUS_CODE.SERVER_ERROR).json({
                 status: HTTP_STATUS_CODE.SERVER_ERROR,
                 errorCode: "ERR500",
@@ -72,7 +92,6 @@ module.exports = {
             });
         }
     },
-
     getAllSessions: async (req, res) => {
         const token = req?.headers?.authorization?.split(' ')[1];
         try {

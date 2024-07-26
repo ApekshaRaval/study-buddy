@@ -60,7 +60,13 @@ export default function CreateSessionModal({
     previewForVideo,
     sessionDate,
     setSessionDate,
-    edit
+    edit,
+    setPreviewForVideo,
+    setSessionEndTime,
+    setSessionStartTime,
+    sessionEndTime,
+    sessionStartTime,
+
 }) {
     return (
         <React.Fragment>
@@ -140,12 +146,12 @@ export default function CreateSessionModal({
                                         render={({ field: { value, onChange, onBlur } }) => (
                                             <DatePicker
                                                 render={<InputIcon />}
-                                                format='MM/DD/YYYY HH:mm:ss'
+                                                format='MM/DD/YYYY'
                                                 showOtherDays
                                                 minDate={new Date()}
                                                 onChange={setSessionDate}
                                                 value={sessionDate}
-                                                plugins={[<TimePicker position='bottom' />, <DatePickerHeader position='left' />]}
+                                            // plugins={[<TimePicker position='bottom' />, <DatePickerHeader position='left' />]}
                                             />
                                         )}
                                     />
@@ -157,6 +163,52 @@ export default function CreateSessionModal({
                                         </FormHelperText>
                                     )}
                                 </FormControl>
+                                {
+                                    tab === 'schedule' && (
+                                        <>
+                                            <InputLabel
+                                                htmlFor='auth-login-v2-email'
+                                                sx={{ fontSize: '0.90rem', mb: 1.5, color: '#0e74d0', fontWeight: 600 }}
+                                            >
+                                                Session Starttime
+                                            </InputLabel>
+                                            <FormControl fullWidth sx={{ mb: 2 }}>
+                                                <DatePicker
+                                                    disableDayPicker
+                                                    format="hh:mm:ss A"
+                                                    onChange={setSessionStartTime}
+                                                    value={sessionStartTime}
+                                                    plugins={[
+                                                        <TimePicker />
+                                                    ]}
+                                                />
+                                            </FormControl>
+                                        </>
+                                    )
+                                }
+                                {
+                                    tab === 'schedule' && (
+                                        <>
+                                            <InputLabel
+                                                htmlFor='auth-login-v2-email'
+                                                sx={{ fontSize: '0.90rem', mb: 1.5, color: '#0e74d0', fontWeight: 600 }}
+                                            >
+                                                Session Endtime
+                                            </InputLabel>
+                                            <FormControl fullWidth sx={{ mb: 2 }}>
+                                                <DatePicker
+                                                    disableDayPicker
+                                                    format="hh:mm:ss A"
+                                                    onChange={setSessionEndTime}
+                                                    value={sessionEndTime}
+                                                    plugins={[
+                                                        <TimePicker />
+                                                    ]}
+                                                />
+                                            </FormControl>
+                                        </>
+                                    )
+                                }
                                 {tab === 'create' && previewForVideo === null && (
                                     <>
                                         <InputLabel
@@ -194,6 +246,7 @@ export default function CreateSessionModal({
                                         </Box>
                                     </>
                                 )}
+
                                 <InputLabel
                                     htmlFor='demo-simple-select-label'
                                     sx={{ fontSize: '0.90rem', mb: 1.5, color: '#0e74d0', fontWeight: 600 }}

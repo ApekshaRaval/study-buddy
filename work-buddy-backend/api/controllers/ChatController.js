@@ -3,10 +3,16 @@ const Chat = require("../models/Chat");
 const sails = require("sails");
 
 module.exports = {
-
-
     sendMessage: async (req, res) => {
-        const { senderId, receiverId, text, image, video, call = false, seen = false } = req.body;
+        const {
+            senderId,
+            receiverId,
+            text,
+            image,
+            video,
+            call = false,
+            seen = false,
+        } = req.body;
 
         if (!senderId || !receiverId) {
             return res.status(400).json({
@@ -38,9 +44,8 @@ module.exports = {
             const chatClause = `INSERT INTO "chats" (id, senderId, receiverId, text, image, call, video, seen) VALUES ('${messageId}', '${senderId}', '${receiverId}', '${text}', '${image}', '${call}', '${video}', '${seen}') RETURNING *`;
 
             const result = await sails.sendNativeQuery(chatClause);
-            console.log('result: ', result);
+            console.log("result: ", result);
             const newMessage = result.rows[0];
-            console.log("newMessage: ", newMessage);
 
             sails.sockets.broadcast(receiverId, "message", newMessage);
             sails.sockets.broadcast(senderId, "message", newMessage);
@@ -65,7 +70,7 @@ module.exports = {
     },
 
     getMessages: async (req, res) => {
-        console.log("cajjjj")
+        const { limit, page } = req.query;
         try {
             const { senderId, receiverId } = req.query;
             if (!senderId || !receiverId) {
@@ -81,7 +86,7 @@ module.exports = {
             // Check if the chats table exists
             const query = `SELECT * FROM chats`;
             const result = await sails.sendNativeQuery(query);
-            console.log('query: ', result);
+            console.log("query: ", result);
 
             if (result.rows.length === 0) {
                 return res.status(200).json({
@@ -94,8 +99,9 @@ module.exports = {
             }
 
             // Fetch messages
-            const queryClause = `SELECT * FROM "chats" WHERE (senderid = '${senderId}' AND receiverid = '${receiverId}') OR (senderid = '${receiverId}' AND receiverid = '${senderId}')`;
-            console.log('queryClause: ', queryClause);
+            const skip = (Number(page) * Number(limit)) - Number(limit)
+            console.log('skip: ', skip);
+            const queryClause = `SELECT * FROM "chats" WHERE (senderid = '${senderId}' AND receiverid = '${receiverId}') OR (senderid = '${receiverId}' AND receiverid = '${senderId}') ORDER BY createdat LIMIT ${limit} OFFSET ${skip}`;
             const messages = await sails.sendNativeQuery(queryClause);
             console.log("messages: ", messages);
 
@@ -106,6 +112,7 @@ module.exports = {
                     message: "No chats available",
                     data: [],
                     error: "",
+                    total: result.rows.length
                 });
             }
 
@@ -115,6 +122,7 @@ module.exports = {
                 message: "Success",
                 data: messages.rows,
                 error: "",
+                total: result.rows.length
             });
         } catch (err) {
             return res.status(500).json({
@@ -127,4 +135,3 @@ module.exports = {
         }
     },
 };
-

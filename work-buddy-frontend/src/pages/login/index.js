@@ -23,8 +23,6 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 // ** Icon Imports
 import Icon from 'src/@core/components/icon'
 
-// ** Third Party Imports
-import * as yup from 'yup'
 import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 
@@ -38,6 +36,7 @@ import themeConfig from 'src/configs/themeConfig'
 
 // ** Layout Import
 import BlankLayout from 'src/@core/layouts/BlankLayout'
+import { LoginSchema } from 'src/@core/utils/Schema'
 
 // ** Styled Components
 const LoginIllustration = styled('img')({
@@ -69,11 +68,6 @@ const LinkStyled = styled(Link)(({ theme }) => ({
   color: theme.palette.primary.main
 }))
 
-const schema = yup.object().shape({
-  email: yup.string().email().required(),
-  password: yup.string().min(5).required()
-})
-
 
 
 const LoginPage = () => {
@@ -92,19 +86,20 @@ const LoginPage = () => {
 
   const {
     control,
-    setError,
     handleSubmit,
     formState: { errors }
   } = useForm({
     mode: 'onBlur',
-    resolver: yupResolver(schema)
+    resolver: yupResolver(LoginSchema)
   })
 
+  /**
+   * The onSubmit function takes user input for email and password, then logs in with the provided
+   * credentials.
+   */
   const onSubmit = data => {
     const { email, password } = data
-
     auth.login({ email, password, rememberMe })
-
   }
 
   return (
@@ -209,7 +204,7 @@ const LoginPage = () => {
               />
               <LinkStyled href='/forgot-password'>Forgot Password?</LinkStyled>
             </Box>
-            <Button fullWidth size='large' type='submit' variant='contained' sx={{ mb: 4 }}>
+            <Button fullWidth size='large' type='submit' variant='contained' sx={{ mb: 4, textTransform: 'capitalize' }}>
               Sign in
             </Button>
             <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>

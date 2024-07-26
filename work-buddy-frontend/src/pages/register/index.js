@@ -38,6 +38,7 @@ import BlankLayout from 'src/@core/layouts/BlankLayout'
 import { useSettings } from 'src/@core/hooks/useSettings'
 import { FormHelperText, MenuItem, Select } from '@mui/material'
 import { useAuth } from 'src/hooks/useAuth'
+import { RegisterSchema } from 'src/@core/utils/Schema'
 
 
 // ** Styled Components
@@ -72,11 +73,6 @@ const LinkStyled = styled(Link)(({ theme }) => ({
 
 const Register = () => {
 
-  const schema = yup.object().shape({
-    userName: yup.string().min(3).required(),
-    email: yup.string().email().required(),
-    password: yup.string().min(5).required()
-  })
   // ** States
   const [showPassword, setShowPassword] = useState(false)
 
@@ -90,18 +86,19 @@ const Register = () => {
 
   const {
     control,
-    setError,
     handleSubmit,
     formState: { errors }
   } = useForm({
     mode: 'onBlur',
-    resolver: yupResolver(schema)
+    resolver: yupResolver(RegisterSchema)
   })
 
+  /**
+   * The onSubmit function takes user input data and registers a new user with the provided information.
+   */
   const onSubmit = data => {
     const { userName, email, password, role } = data
     auth.register({ email, password, userName, role })
-
   }
 
   return (
@@ -208,6 +205,11 @@ const Register = () => {
                   </Select>
                 )}
               />
+              {errors.role && (
+                <FormHelperText sx={{ color: 'error.main', marginRight: '0', marginLeft: '0', fontSize: '0.75rem' }} id=''>
+                  {errors.role.message}
+                </FormHelperText>
+              )}
             </FormControl>
             <FormControlLabel
               sx={{ '& .MuiFormControlLabel-label': { fontSize: '0.875rem', color: 'text.secondary' } }}
@@ -223,7 +225,7 @@ const Register = () => {
                 </>
               }
             />
-            <Button fullWidth size='large' type='submit' variant='contained' sx={{ mb: 4 }}>
+            <Button fullWidth size='large' type='submit' variant='contained' sx={{ mb: 4, textTransform: 'capitalize' }}>
               Sign up
             </Button>
             <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>

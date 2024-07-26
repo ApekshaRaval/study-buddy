@@ -1,52 +1,33 @@
-/**
- * Notification.js
- *
- * @description :: A model definition represents a database table/collection.
- * @docs        :: https://sailsjs.com/docs/concepts/models-and-orm/models
- */
-
 module.exports = {
-  tableName: "notification",
+  tableName: 'notification',
   attributes: {
-    notificationId: {
+    notificationid: {
       type: 'string',
-      required: true
+      columnType: 'uuid',
+      required: true,
+      unique: true,
     },
     message: {
       type: 'string',
       required: true,
-      columnType: 'varchar(10000)',
     },
-    senderId: {
+    senderid: {
       type: 'string',
-      required: true
+      columnType: 'uuid',
+      required: true,
     },
-    receiverId: {
-      type: 'string',
-      required: true
+    receiverid: {
+      type: 'ref',
+      columnType: 'character varying[]',
     },
     seen: {
       type: 'boolean',
-      defaultsTo: false
+      defaultsTo: false,
     },
-    createdAt: {
-      type: 'string',
+    createdat: {
+      type: 'ref',
+      columnType: 'timestamp',
+      required: true,
     },
-    //  ╔═╗╦═╗╦╔╦╗╦╔╦╗╦╦  ╦╔═╗╔═╗
-    //  ╠═╝╠╦╝║║║║║ ║ ║╚╗╔╝║╣ ╚═╗
-    //  ╩  ╩╚═╩╩ ╩╩ ╩ ╩ ╚╝ ╚═╝╚═╝
-
-
-    //  ╔═╗╔╦╗╔╗ ╔═╗╔╦╗╔═╗
-    //  ║╣ ║║║╠╩╗║╣  ║║╚═╗
-    //  ╚═╝╩ ╩╚═╝╚═╝═╩╝╚═╝
-
-
-    //  ╔═╗╔═╗╔═╗╔═╗╔═╗╦╔═╗╔╦╗╦╔═╗╔╗╔╔═╗
-    //  ╠═╣╚═╗╚═╗║ ║║  ║╠═╣ ║ ║║ ║║║║╚═╗
-    //  ╩ ╩╚═╝╚═╝╚═╝╚═╝╩╩ ╩ ╩ ╩╚═╝╝╚╝╚═╝
-
   },
-
 };
-

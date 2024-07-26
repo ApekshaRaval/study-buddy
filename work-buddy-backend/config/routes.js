@@ -35,6 +35,7 @@ const sessionRouter = {
 const notificationRouter = {
     'POST /api/send-notification': 'NotificationController.sendNotification',
     'GET /api/get-notifications/:id': 'NotificationController.getNotifications',
+    'PUT /api/update-notification/:id': 'NotificationController.updateNotification'
 }
 const subjectRouter = {
     'POST /api/create-subject': 'SubjectController.createSubject',

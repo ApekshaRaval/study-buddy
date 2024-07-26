@@ -15,6 +15,7 @@ const Classroom = () => {
     const [countdowns, setCountdowns] = useState({});
     const router = useRouter();
     const now = new Date();
+
     const fiveHoursLater = new Date(now.getTime() + 3 * 60 * 60 * 1000);
     const fetchSessions = async () => {
         const response = await fetch(`http://localhost:1337/api/sessions/${user?.id}`, {
@@ -57,8 +58,27 @@ const Classroom = () => {
         return () => clearInterval(interval);
     }, [sessions]);
 
-    return (
+    const getSessionDuration = (startTime, endTime) => {
+        // Ensure the startTime and endTime are valid numbers
+        const start = new Date(Number(startTime));
+        const end = new Date(Number(endTime));
 
+        // Check if the dates are valid
+        if (isNaN(start) || isNaN(end)) {
+            return 'Invalid date';
+        }
+
+        // Calculate the duration in milliseconds
+        const duration = end - start;
+
+        // Convert duration to hours and minutes
+        const hours = Math.floor(duration / (1000 * 60 * 60));
+        const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
+
+        return `${hours}h ${minutes}m`;
+    };
+
+    return (
         <Grid container spacing={6} mt={5}>
             {sessions &&
                 sessions.length > 0 &&
@@ -71,19 +91,20 @@ const Classroom = () => {
                                 minWidth: { xs: '100%', lg: '300px', md: '400px' },
                                 width: '100%',
                                 minHeight: '200px',
-                                height: '100%',
-                                display: 'flex',
-                                alignItems: 'center',
+                                height: 'auto',
                                 marginBottom: '20px',
                                 cursor: 'pointer',
-                                backgroundImage:
-                                    'url(https://t4.ftcdn.net/jpg/03/09/90/87/360_F_309908742_ylcAx40hxV26oMvqWhXNnoWbNnX5eC1S.jpg)',
+                                backgroundImage: 'url(https://t4.ftcdn.net/jpg/03/09/90/87/360_F_309908742_ylcAx40hxV26oMvqWhXNnoWbNnX5eC1S.jpg)',
                                 backgroundSize: 'cover'
                             }}
                             onClick={() => router.push(`/classroom/${session.sessionId}`)}
                         >
                             <Chip
-                                label={session?.sessionDate < fiveHoursLater ? 'Ongoing' : session?.sessionDate === fiveHoursLater ? 'Ended' : countdowns[session.sessionId]}
+                                label={
+                                    session?.sessionType === 'schedule'
+                                        ? `Duration: ${getSessionDuration(session?.startTime, session?.endTime)}`
+                                        : session?.sessionDate < fiveHoursLater ? 'Ongoing' : session?.sessionDate === fiveHoursLater ? 'Ended' : countdowns[session.sessionId]
+                                }
                                 sx={{
                                     position: 'absolute',
                                     top: '10px',
@@ -97,7 +118,19 @@ const Classroom = () => {
                             <CardContent>
                                 <Typography variant='h5' sx={{ mb: 3 }}>{session.sessionTitle}</Typography>
                                 <Chip label={session.subject} sx={{ mb: 3, fontWeight: 'bold', backgroundColor: '#98CFFD', color: 'white' }} />
-                                <Typography variant='body2'>{new Date(Number(session.sessionDate)).toLocaleString()}</Typography>
+                                <Typography variant='body2' sx={{ mb: 3, fontWeight: 'bold', fontFamily: 'monospace' }}>
+                                    {new Date(Number(session?.sessionDate)).toDateString()}
+                                    {session?.sessionType === 'schedule' && (
+                                        <>
+                                            {' - '}
+                                            {new Date(Number(session?.startTime)).getHours().toString().padStart(2, '0')}:
+                                            {new Date(Number(session?.startTime)).getMinutes().toString().padStart(2, '0')}
+                                            {' to '}
+                                            {new Date(Number(session?.endTime)).getHours().toString().padStart(2, '0')}:
+                                            {new Date(Number(session?.endTime)).getMinutes().toString().padStart(2, '0')}
+                                        </>
+                                    )}
+                                </Typography>
                                 {session.sessionContent && (
                                     <video controls style={{ width: '100%', maxHeight: '300px' }}>
                                         <source src={session.sessionContent} />
@@ -108,7 +141,7 @@ const Classroom = () => {
                                         {session.sessionLink}
                                     </Link>
                                 )}
-                                {session.quizcontent && (
+                                {session?.quizcontent && session?.quizcontent.length > 0 && (
                                     <Box sx={{ width: '100%' }}>
                                         <Typography sx={{ mt: 3, fontWeight: 'bold' }}>
                                             Quiz starts in: {countdowns[session.sessionId] || 'Loading...'}
@@ -126,9 +159,9 @@ const Classroom = () => {
                             </CardContent>
                         </Card>
                     </Grid>
-                ))}
+                ))
+            }
         </Grid>
-
     );
 };
 

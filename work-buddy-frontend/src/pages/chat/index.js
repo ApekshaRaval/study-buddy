@@ -3,50 +3,40 @@ import {
     Badge,
     Button,
     Card,
-    CardActions,
     CardContent,
     CardHeader,
     Grid,
     IconButton,
     Menu,
     MenuItem,
-    SpeedDial,
-    SpeedDialAction,
     TextField,
     Typography,
-    useMediaQuery
-} from '@mui/material'
+    useMediaQuery,
+} from '@mui/material';
 import { Box } from '@mui/system'
-import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import io from 'socket.io-client'
 import { ROLE_STUDENT, ROLE_TEACHER } from 'src/constants/constant'
 import { useAuth } from 'src/hooks/useAuth'
-import ForumIcon from '@mui/icons-material/Forum'
-import CallIcon from '@mui/icons-material/Call'
-import GroupsIcon from '@mui/icons-material/Groups'
-import VideocamIcon from '@mui/icons-material/Videocam'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import styled from '@emotion/styled'
 import SendIcon from '@mui/icons-material/Send'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
-import MicIcon from '@mui/icons-material/Mic'
 import InsertPhotoIcon from '@mui/icons-material/InsertPhoto'
 import VideoFileIcon from '@mui/icons-material/VideoFile'
 import EmojiPicker from 'emoji-picker-react'
 import SentimentSatisfiedAltIcon from '@mui/icons-material/SentimentSatisfiedAlt'
-import ArticleIcon from '@mui/icons-material/Article'
 import { useForm } from 'react-hook-form'
-import PreviewModel from './PreviewModel'
+import InfiniteScroll from 'react-infinite-scroll-component';
+import { useSearchParams, useRouter } from 'next/navigation'
 const socket = io('http://localhost:1337', {
     transports: ['websocket']
 })
 
 const StyledBadge = styled(Badge)(({ theme }) => ({
     '& .MuiBadge-badge': {
-        right: -5,
-        top: 28,
-        // border: `2px solid ${theme.palette.background.paper}`,
+        right: 2,
+        top: 25,
         padding: '0 4px'
     }
 }))
@@ -65,7 +55,7 @@ const Chat = () => {
     })
     const sm = useMediaQuery('(max-width: 600px)')
     const [messages, setMessages] = useState([])
-    console.log('messages: ', messages)
+    console.log('messages: ', messages);
     const currentMessage = useRef(null)
     const [message, setMessage] = useState('')
     const [openModel, setOpenModel] = useState(false)
@@ -79,37 +69,45 @@ const Chat = () => {
     const [previewForImage, setPreviewForImage] = useState(null)
     const [previewForVideo, setPreviewForVideo] = useState(null)
     const [receiver, setReceiver] = useState(null)
+    const limit = 20
+    const [page, setPage] = useState(1)
+    const [total, setTotal] = useState(0)
+    const searchParams = useSearchParams()
+    const router = useRouter();
+    const [searchParam, setSearchParam] = useState(searchParams.get('receiver'))
+    const search = searchParams.get('receiver')
+    console.log('search: ', search);
+
     const handleClick = event => {
         setAnchorEl(event.currentTarget)
     }
+
     useEffect(() => {
         if (currentMessage?.current) {
-            currentMessage?.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+            currentMessage?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }
     }, [message])
 
     const handleClose = () => {
         setAnchorEl(null)
     }
-    const fetchAllMessages = async () => {
-        // setLoading(true)
-        if (!receiver) return
-        console.log("calll")
-        try {
 
-            const response = await fetch(
-                `http://localhost:1337/chat/message?senderId=${user?.id}&receiverId=${receiver?.id}`,
-                {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                }
-            )
+    const fetchAllMessages = async () => {
+        if (!receiver) return
+        try {
+            const response = await fetch(`http://localhost:1337/chat/message?senderId=${user?.id}&receiverId=${receiver?.id}&page=${page}&limit=10`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            })
             const data = await response.json()
-            setMessages(data?.data)
+            if (data) {
+                setMessages((prev) => [...data?.data,])
+                setTotal(data?.total)
+            }
         } catch (error) {
-            console.log('Fetch All Users Error:', error)
+            console.log('Fetch All Messages Error:', error)
         }
     }
 
@@ -144,11 +142,8 @@ const Chat = () => {
             socket.off('disconnect')
             socket.off('connect_error')
         }
-    }, [message, user, receiver])
+    }, [])
 
-
-
-    console.log(watch())
     const sendMessage = async () => {
         const { image, video } = getValues()
         if (!message && !image && !video) return
@@ -163,7 +158,7 @@ const Chat = () => {
             reader.onload = () => {
                 messageData.image = reader.result
                 try {
-                    socketConnection.emit('send-message', messageData)
+                    socket.emit('send-message', messageData)
                 } catch (error) {
                     console.error('Error sending message:', error)
                 }
@@ -175,7 +170,7 @@ const Chat = () => {
                 messageData.video = reader.result
                 console.log('messageData', messageData)
                 try {
-                    socketConnection.emit('send-message', messageData)
+                    socket.emit('send-message', messageData)
                 } catch (error) {
                     console.error('Error sending message:', error)
                 }
@@ -183,7 +178,7 @@ const Chat = () => {
             reader.readAsDataURL(video[0])
         } else {
             try {
-                socketConnection.emit('send-message', messageData)
+                socket.emit('send-message', messageData)
             } catch (error) {
                 console.error('Error sending message:', error)
             }
@@ -204,9 +199,29 @@ const Chat = () => {
             setValue('video', null)
         }
     }
+
     const handleMessageChange = e => {
         setMessage(e.target.value)
     }
+    const fetchUser = async () => {
+        try {
+            const fetchResponse = fetch(`http://localhost:1337/api/user-detail/${search}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            const response = await fetchResponse
+            const data = await response.json()
+            setReceiver(data?.data)
+        } catch (err) {
+            console.log('err: ', err)
+        }
+    }
+
+    useEffect(() => {
+        fetchUser()
+    }, [search])
 
     const fetchAllUsers = async () => {
         try {
@@ -226,6 +241,7 @@ const Chat = () => {
             console.log('err: ', err)
         }
     }
+
     useEffect(() => {
         fetchAllUsers()
     }, [])
@@ -251,7 +267,6 @@ const Chat = () => {
     useOutsideClick(wrapperRef, () => setShowEmoji(false))
 
     const onSubmit = () => {
-        console.log(':vghhfghfgh,', getValues())
         sendMessage()
     }
 
@@ -271,317 +286,227 @@ const Chat = () => {
             }
         }
     }
+
+    const handleSelectedUser = (user) => {
+        router.push(`?receiver=${user?.id}`)
+        setReceiver(user)
+        setMessages([])
+        setPage(1)
+    }
+
+    const fetchMoreData = async () => {
+        console.log("call")
+        if (!receiver) return
+        setPage(prev => prev + 1)
+        try {
+            const response = await fetch(`http://localhost:1337/chat/message?senderId=${user?.id}&receiverId=${receiver?.id}&page=${page + 1}&limit=10`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            const data = await response.json()
+            if (data) {
+                setMessages((prev) => [...data?.data, ...prev])
+                setTotal(data?.total)
+            }
+        } catch (error) {
+            console.log('Fetch More Messages Error:', error)
+        }
+    }
+
+    useEffect(() => {
+        if (search) {
+            const receiverUser = users?.find(user => user.id == search)
+            if (receiverUser) {
+                setReceiver(receiverUser)
+                setMessages([])
+                setPage(1)
+            }
+        }
+    }, [search])
+
+    const isMediaFilePresent = Boolean(watch('image')?.length || watch('video')?.length)
+    const scrollableTargetId = 'scrollable-target'
+
     return (
-        <>
-            <Grid container spacing={6}>
-                <Grid item xs={12} md={3}>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: 4,
-                            backgroundColor: '#98CFFD',
-                            borderRadius: '10px 10px 0 0'
-                        }}
+        <Card sx={{ position: 'relative' }}>
+            <CardHeader
+                sx={{ backgroundColor: '#98CFFD' }}
+                avatar={
+                    <StyledBadge
+                        overlap='circular'
+                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                        variant='dot'
+                        color='success'
                     >
-                        <IconButton aria-label='cart'>
-                            <StyledBadge badgeContent={4} color='secondary'>
-                                <ForumIcon sx={{ width: 25, height: 30, color: 'white' }} />
-                            </StyledBadge>
+                        <Avatar alt={receiver?.userName} src={receiver?.profilePicture ? receiver?.profilePicture : 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRi7yCZ2XEw9y3jo1_CJpNeZCw0khxgVxh7z7fsEyK2FwrZz8gBF28sqsAdwKY1PInz4z4&usqp=CAU'} />
+                    </StyledBadge>
+                }
+
+                action={
+                    <Box>
+                        <IconButton
+                            aria-label='settings'
+                            aria-controls={open ? 'demo-positioned-menu' : undefined}
+                            aria-haspopup='true'
+                            aria-expanded={open ? 'true' : undefined}
+                            onClick={handleClick}
+                        >
+                            <MoreHorizIcon />
                         </IconButton>
-                        <IconButton aria-label='cart'>
-                            <StyledBadge badgeContent={4} color='secondary'>
-                                <CallIcon sx={{ width: 25, height: 30, color: 'white' }} />
-                            </StyledBadge>
-                        </IconButton>
-                        <IconButton aria-label='cart'>
-                            <StyledBadge badgeContent={4} color='secondary'>
-                                <GroupsIcon sx={{ width: 35, height: 35, color: 'white' }} />
-                            </StyledBadge>
-                        </IconButton>
-                        <IconButton aria-label='cart'>
-                            <StyledBadge badgeContent={4} color='secondary'>
-                                <Avatar
-                                    src={'https://i.pinimg.com/474x/8c/44/07/8c44070959b012caa775ee4929c15ffe.jpg'}
-                                    sx={{ width: 35, height: 35 }}
-                                />
-                            </StyledBadge>
-                        </IconButton>
+                        <Menu
+                            id='demo-positioned-menu'
+                            aria-labelledby='demo-positioned-button'
+                            anchorEl={anchorEl}
+                            open={open}
+                            onClose={handleClose}
+                            anchorOrigin={{
+                                vertical: 'top',
+                                horizontal: 'left'
+                            }}
+                            transformOrigin={{
+                                vertical: 'top',
+                                horizontal: 'left'
+                            }}
+                        >
+                            <MenuItem onClick={handleClose}>Profile</MenuItem>
+                            <MenuItem onClick={handleClose}>My account</MenuItem>
+                            <MenuItem onClick={handleClose}>Logout</MenuItem>
+                        </Menu>
                     </Box>
-                    <Card sx={{ height: '74vh', overflow: 'auto' }}>
-                        <CardHeader title='Chat' />
-                        <CardContent>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                {users &&
-                                    users.length > 0 &&
-                                    users.map(user => (
-                                        <Box
-                                            key={user?.id}
-                                            sx={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer' }}
-                                            onClick={() => setReceiver(user)}
-                                        >
-                                            <Box sx={{ position: 'relative' }}>
-                                                <Avatar
-                                                    src={'https://i.pinimg.com/474x/8c/44/07/8c44070959b012caa775ee4929c15ffe.jpg'}
-                                                    sx={{ width: 30, height: 30 }}
-                                                />
-                                                <Box
-                                                    sx={{
-                                                        width: 10,
-                                                        height: 10,
-                                                        borderRadius: '50%',
-                                                        border: '2px solid white',
-                                                        backgroundColor: 'success.main',
-                                                        position: 'absolute',
-                                                        bottom: '-1px',
-                                                        right: '-2px'
-                                                    }}
-                                                ></Box>
-                                            </Box>
-                                            <Typography sx={{ fontWeight: 500, color: 'primary.main' }}>{user?.userName}</Typography>
-                                        </Box>
-                                    ))}
+                }
+                title={<Box
+                    key={user.id}
+                    display='flex'
+                    alignItems='center'
+                    p={2}
+                    sx={{
+                        cursor: 'pointer'
+                    }}
+                    onClick={() => handleSelectedUser(receiver)}
+                >
+                    <Typography variant='subtitle2' ml={2} sx={{ fontWeight: 700, fontSize: '18px' }}>
+                        {receiver?.userName ? receiver?.userName : 'Chat'}
+                    </Typography>
+                </Box>}
+            />
+            <CardContent >
+                <Box display='flex'>
+                    <Grid container>
+                        <Grid item xs={12} sm={3} md={2} lg={2}>
+                            <Box className='users-chat-list'>
+                                {users?.map(user => (
+                                    <Box
+                                        key={user.id}
+                                        display='flex'
+                                        alignItems='center'
+                                        p={2}
+                                        sx={{
+                                            cursor: 'pointer'
+                                        }}
+                                        onClick={() => handleSelectedUser(user)}
+                                    >
+                                        <Avatar alt={user.userName} src={user.profilePicture ? user.profilePicture : 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRi7yCZ2XEw9y3jo1_CJpNeZCw0khxgVxh7z7fsEyK2FwrZz8gBF28sqsAdwKY1PInz4z4&usqp=CAU'} />
+                                        <Typography variant='subtitle2' ml={2}>
+                                            {user.userName}
+                                        </Typography>
+                                    </Box>
+                                ))}
                             </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={12} md={9}>
-                    {receiver ? (
-                        <Card sx={{ height: '83vh', position: 'relative', overflow: 'auto' }}>
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    padding: 4,
-                                    backgroundColor: '#98CFFD',
-                                    borderRadius: '10px 10px 0 0'
-                                }}
-                            >
-                                <Grid container spacing={2}>
-                                    <Grid item xs={6} sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-                                        <Box>
-                                            <Avatar
-                                                src={'https://i.pinimg.com/474x/8c/44/07/8c44070959b012caa775ee4929c15ffe.jpg'}
-                                                sx={{ width: 40, height: 40 }}
-                                            />
-                                        </Box>
-                                        <Box>
-                                            <Typography sx={{ fontWeight: 500, color: 'primary.main' }}>{receiver?.userName}</Typography>
-                                            <Typography sx={{ fontWeight: 500, color: 'primary.main' }}>last seen at 12:00</Typography>
-                                        </Box>
-                                    </Grid>
-                                    <Grid item xs={6} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                        <Button variant='text'>
-                                            <CallIcon sx={{ width: 25, height: 30, color: 'white' }} />
-                                        </Button>
-                                        <Button variant='text'>
-                                            <VideocamIcon sx={{ width: 25, height: 30, color: 'white' }} />
-                                        </Button>
-
-                                        <Button variant='text'>
-                                            <MoreHorizIcon sx={{ width: 25, height: 30, color: 'white' }} />
-                                        </Button>
-                                    </Grid>
-                                </Grid>
-                            </Box>
-
-                            <CardContent>
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                    {messages &&
-                                        messages?.map((data, index) => (
+                        </Grid>
+                        <Grid item xs={12} sm={9} md={10} lg={10}>
+                            <Box display='flex' flexDirection='column'>
+                                <Box
+                                    id={scrollableTargetId}
+                                    sx={{
+                                        height: 'calc(100vh - 350px)',
+                                        overflowY: 'scroll',
+                                        // backgroundImage:
+                                        //     'url(https://i.pinimg.com/474x/72/9e/18/729e189c068e46c48e3eeb33c53bfaba.jpg)',
+                                        // backgroundSize: 'cover',
+                                        // backgroundPosition: 'center',
+                                        backgroundColor: '#f5f5f5',
+                                        borderRadius: '8px',
+                                        padding: 2,
+                                    }}
+                                >
+                                    <InfiniteScroll
+                                        dataLength={messages?.length}
+                                        next={fetchMoreData}
+                                        hasMore={messages?.length < total}
+                                        inverse={true}
+                                        scrollableTarget={scrollableTargetId}
+                                    >
+                                        {messages?.map((msg, index) => (
                                             <Box
                                                 key={index}
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: user?.id === data?.senderid ? 'flex-end' : 'flex-start'
-                                                }}
+                                                display='flex'
+                                                flexDirection={msg.senderid === user?.id ? 'row-reverse' : 'row'}
+                                                mb={2}
+                                                ref={index === messages.length - 1 ? currentMessage : null}
                                             >
+                                                <Avatar alt={msg.senderid} src={msg.senderProfilePicture ? msg.senderProfilePicture : 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRi7yCZ2XEw9y3jo1_CJpNeZCw0khxgVxh7z7fsEyK2FwrZz8gBF28sqsAdwKY1PInz4z4&usqp=CAU'} />
                                                 <Box
-                                                    sx={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        px: 2,
-                                                        py: 1,
-                                                        borderRadius: '20px',
-                                                        // borderRadius: user?._id === data?.messageByUserId ? '10px 0px 10px 10px' : '0px 10px 10px 10px',
-                                                        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-                                                        background:
-                                                            user?.id === data?.senderid
-                                                                ? 'linear-gradient(to right bottom, #EEF5FF, #B4D4FF)'
-                                                                : 'white'
-                                                    }}
-                                                    ref={currentMessage}
+                                                    ml={msg.senderid === user?.id ? 0 : 2}
+                                                    mr={msg.senderid === user?.id ? 2 : 0}
+                                                    p={2}
+                                                    bgcolor={msg.senderid === user?.id ? '#1976d2' : '#e0e0e0'}
+                                                    borderRadius={2}
                                                 >
-                                                    {data?.image !== "undefined" && (data?.text !== '' || data?.text !== null) && (
-                                                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                                                            <img
-                                                                src={data?.image}
-                                                                alt='Message Image'
-                                                                style={{ maxWidth: '200px', borderRadius: '10px', maxHeight: sm ? '150px' : '200px' }}
-                                                            />
-                                                            {data?.text && (
-                                                                <Typography
-                                                                    variant='body1'
-                                                                    color='text.primary'
-                                                                    sx={{ display: 'flex', flexDirection: 'column' }}
-                                                                >
-                                                                    {data?.text}
-                                                                </Typography>
-                                                            )}
-                                                        </Box>
-                                                    )}
-                                                    {data?.video !== "undefined" && (
-                                                        <video controls style={{ maxWidth: '200px' }}>
-                                                            <source src={data?.video} type='video/mp4' />
-                                                            Your browser does not support the video tag.
-                                                        </video>
-                                                    )}
-                                                    {data?.text !== '' && data?.text !== null && data?.image === "undefined" && data?.video === "undefined" && (
-                                                        <Typography
-                                                            variant='body1'
-                                                            color='text.primary'
-                                                            sx={{ display: 'flex', flexDirection: 'column' }}
-                                                        >
-                                                            {data?.text}
-                                                        </Typography>
-                                                    )}
+                                                    <Typography variant='body2' color={msg.senderid === user?.id ? '#fff' : '#000'}>{msg.text}</Typography>
                                                 </Box>
                                             </Box>
                                         ))}
+                                    </InfiniteScroll>
                                 </Box>
-                            </CardContent>
-                            <CardActions
-                                sx={{ justifyContent: 'space-between', padding: 4, position: 'absolute', bottom: 0, left: 0, right: 0 }}
-                            >
-                                <Box sx={{ position: 'relative', width: '100%' }}>
+                                <Box display='flex' alignItems='center' mt={2}>
                                     <TextField
                                         value={message}
                                         onChange={handleMessageChange}
-                                        placeholder='Message...'
-                                        size='medium'
-                                        sx={{ width: '100%' }}
+                                        fullWidth
+                                        variant='outlined'
+                                        size='small'
+                                        placeholder='Type a message'
+                                        InputProps={{
+                                            endAdornment: (
+                                                <IconButton onClick={() => setShowEmoji(!showEmoji)}>
+                                                    <SentimentSatisfiedAltIcon />
+                                                </IconButton>
+                                            )
+                                        }}
                                     />
-                                    <Box sx={{ position: 'absolute', top: 9, right: 9, display: 'flex', gap: 1, alignItems: 'center' }}>
-                                        <IconButton
-                                            id='basic-button'
-                                            aria-controls={open ? 'basic-menu' : undefined}
-                                            aria-haspopup='true'
-                                            aria-expanded={open ? 'true' : undefined}
-                                            onClick={handleClick}
-                                        >
-                                            <AttachFileIcon />
-                                        </IconButton>
-                                        <Menu
-                                            id='basic-menu'
-                                            anchorEl={anchorEl}
-                                            open={open}
-                                            sx={{ width: '100px', backgroundColor: 'transparent' }}
-                                            onClose={handleClose}
-                                            MenuListProps={{
-                                                'aria-labelledby': 'basic-button'
-                                            }}
-                                        >
-                                            <MenuItem onClick={handleClose}>
-                                                <label htmlFor='video'>
-                                                    <VideoFileIcon />{' '}
-                                                </label>
-                                            </MenuItem>
-                                            <MenuItem onClick={handleClose} id='image'>
-                                                {' '}
-                                                <label htmlFor='image'>
-                                                    <InsertPhotoIcon />{' '}
-                                                </label>
-                                            </MenuItem>
-                                            <MenuItem onClick={handleClose}>
-                                                {' '}
-                                                <label htmlFor='document'>
-                                                    <ArticleIcon />
-                                                </label>
-                                            </MenuItem>
-                                        </Menu>
-                                        <input
-                                            type='file'
-                                            id='image'
-                                            accept='image/*'
-                                            style={{ display: 'none' }}
-                                            {...register('image')}
-                                            onChange={e => handleMediaChange(e, 'image')}
-                                        />
-                                        <input
-                                            type='file'
-                                            id='video'
-                                            accept='video/*'
-                                            style={{ display: 'none' }}
-                                            {...register('video')}
-                                            onChange={e => handleMediaChange(e, 'video')}
-                                        />
-                                        <input
-                                            type='file'
-                                            id='document'
-                                            accept='pdf/*'
-                                            style={{ display: 'none' }}
-                                            {...register('image')}
-                                            onChange={e => handleMediaChange(e, 'image')}
-                                        />
-                                        <IconButton onClick={() => setShowEmoji(!showEmoji)}>
-                                            <SentimentSatisfiedAltIcon />
-                                        </IconButton>
-
-                                        <IconButton
-                                            type='button'
-                                            sx={{
-                                                backgroundColor: '#0E74D0',
-                                                borderRadius: '50% 0 50% 50%',
-                                                ':hover': { backgroundColor: '#0E74D0' }
-                                            }}
-                                            onClick={onSubmit}
-                                        >
-                                            <SendIcon sx={{ color: 'white' }} />
-                                        </IconButton>
-                                    </Box>
+                                    <IconButton component='label'>
+                                        <AttachFileIcon />
+                                        <input type='file' hidden onChange={e => handleMediaChange(e, 'file')} />
+                                    </IconButton>
+                                    <IconButton component='label'>
+                                        <InsertPhotoIcon />
+                                        <input type='file' hidden onChange={e => handleMediaChange(e, 'image')} />
+                                    </IconButton>
+                                    <IconButton component='label'>
+                                        <VideoFileIcon />
+                                        <input type='file' hidden onChange={e => handleMediaChange(e, 'video')} />
+                                    </IconButton>
+                                    <Button variant='contained' color='primary' onClick={sendMessage} endIcon={<SendIcon />}>
+                                        Send
+                                    </Button>
                                 </Box>
-                            </CardActions>
-                            <Box ref={wrapperRef}>
-                                <EmojiPicker
-                                    open={showEmoji}
-                                    setOpen={setShowEmoji}
-                                    onEmojiClick={e => onEmojiClick(e)}
-                                    width={'50%'}
-                                    style={{ position: 'absolute', bottom: 0, right: 0 }}
-                                />
+                                {showEmoji && (
+                                    <Box ref={wrapperRef} sx={{ position: 'absolute', bottom: 70, right: 20 }}>
+                                        <EmojiPicker onEmojiClick={onEmojiClick} />
+                                    </Box>
+                                )}
                             </Box>
-                        </Card>
-                    ) : (
-                        <Card sx={{ height: '83vh', position: 'relative', overflow: 'auto' }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '83vh' }}>
-                                <h2>No Chats Found</h2>
-                            </Box>
-                        </Card>
-                    )}
-                </Grid>
-            </Grid>
-            {openModel && (
-                <PreviewModel
-                    open={openModel}
-                    setOpen={setOpenModel}
-                    previewForImage={previewForImage}
-                    previewForVideo={previewForVideo}
-                    data={getValues()}
-                    user={user}
-                    setValue={setValue}
-                    register={register}
-                    onSubmit={onSubmit}
-                />
-            )}
-        </>
+                        </Grid>
+                    </Grid>
+                </Box >
+            </CardContent >
+        </Card >
     )
 }
 Chat.acl = {
     action: 'manage',
     subject: [ROLE_STUDENT, ROLE_TEACHER]
 }
-
 export default Chat

@@ -60,7 +60,7 @@ module.exports = {
 
             const id = uuidv4();
             const hashedPassword = await bcrypt.hash(password, 10);
-            const addUserData = `INSERT INTO "user" (id, "userName", email, password, "isLoggedIn", role, subjects, standard,token,"avatarUrl", "avatarFd") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`;
+            const addUserData = `INSERT INTO "user" (id, "userName", email, password, "isLoggedIn", role, subjects, standard,token,"profilePicUrl", "profilePicFd") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`;
             const data = await sails.sendNativeQuery(addUserData, [
                 id,
                 userName,
@@ -382,9 +382,9 @@ module.exports = {
             }
 
             // Add avatar URL if exists
-            if (user.avatarFd) {
+            if (user.profilePicFd) {
                 const baseUrl = sails.config.custom.baseUrl;
-                user.avatarUrl = `${baseUrl}/user/avatar/${id}`;
+                user.profilePicUrl = `${baseUrl}/user/avatar/${id}`;
             }
 
             return res.status(HTTP_STATUS_CODE.OK).json({
